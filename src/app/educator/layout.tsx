@@ -1,7 +1,8 @@
-import { BookOpen, LayoutDashboard, Settings, LogOut, Users, FileQuestion } from 'lucide-react'
+import { BookOpen, LayoutDashboard, Settings, LogOut, Users, FileQuestion, BarChart3 } from 'lucide-react'
 import Link from 'next/link'
 import { signOut } from '../auth/actions'
 import { createClient } from '@/lib/supabase/server'
+import { NotificationBell } from '@/components/NotificationBell'
 
 export default async function EducatorLayout({
   children,
@@ -19,11 +20,14 @@ export default async function EducatorLayout({
       <aside className="w-full md:w-64 glass border-r border-white/5 flex flex-col z-20 shrink-0">
         
         {/* Brand */}
-        <div className="h-20 flex items-center px-6 border-b border-white/5 shrink-0">
-           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-primary to-brand-accent flex items-center justify-center mr-3">
-             <BookOpen className="text-white w-4 h-4" />
+        <div className="h-20 flex items-center justify-between px-6 border-b border-white/5 shrink-0 w-full">
+           <div className="flex items-center">
+             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-primary to-brand-accent flex items-center justify-center mr-3">
+               <BookOpen className="text-white w-4 h-4" />
+             </div>
+             <span className="text-xl font-heading font-bold text-white tracking-tight">Gramatek</span>
            </div>
-           <span className="text-xl font-heading font-bold text-white tracking-tight">Gramatek</span>
+           <NotificationBell />
         </div>
 
         {/* Navigation */}
@@ -35,6 +39,10 @@ export default async function EducatorLayout({
           <Link href="/educator/classrooms" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors group">
             <Users className="w-5 h-5 group-hover:text-brand-primary transition-colors" />
             <span className="font-medium">Classrooms</span>
+          </Link>
+          <Link href="/educator/analytics" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors group">
+            <BarChart3 className="w-5 h-5 group-hover:text-brand-primary transition-colors" />
+            <span className="font-medium">Analytics</span>
           </Link>
           <Link href="/educator/quizzes/new" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors group">
             <FileQuestion className="w-5 h-5 group-hover:text-brand-primary transition-colors" />

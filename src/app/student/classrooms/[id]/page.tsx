@@ -15,7 +15,7 @@ export default async function StudentClassroomPage({ params }: { params: Promise
     .from('classrooms')
     .select(`
       *,
-      profiles ( full_name ),
+      profiles!classrooms_educator_id_fkey ( full_name ),
       classroom_members!inner(student_id)
     `)
     .eq('id', id)

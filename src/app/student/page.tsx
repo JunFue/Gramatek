@@ -8,7 +8,7 @@ export default async function StudentDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
 
   // Fetch enrolled classrooms
-  const { data: enrollments } = await supabase
+  const { data: enrollments, error } = await supabase
     .from('classroom_members')
     .select(`
       joined_at,
@@ -17,11 +17,17 @@ export default async function StudentDashboard() {
         name,
         description,
         is_active,
-        profiles ( full_name )
+        profiles!classrooms_educator_id_fkey ( full_name )
       )
     `)
     .eq('student_id', user?.id)
     .order('joined_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching enrollments:', error)
+  } else {
+    console.log('Enrollments data:', JSON.stringify(enrollments, null, 2))
+  }
 
   return (
     <div className="p-8 max-w-6xl mx-auto animate-fade-in relative z-10">

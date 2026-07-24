@@ -1,7 +1,8 @@
 import { GraduationCap, LayoutDashboard, LogOut, FileBadge } from 'lucide-react'
 import Link from 'next/link'
-import { signOut } from '../auth/actions'
 import { createClient } from '@/lib/supabase/server'
+import { NotificationBell } from '@/components/NotificationBell'
+import { signOut } from '../auth/actions'
 
 export default async function StudentLayout({
   children,
@@ -19,11 +20,14 @@ export default async function StudentLayout({
       <aside className="w-full md:w-64 glass border-r border-white/5 flex flex-col z-20 shrink-0">
         
         {/* Brand */}
-        <div className="h-20 flex items-center px-6 border-b border-white/5 shrink-0">
-           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-accent to-emerald-300 flex items-center justify-center mr-3">
-             <GraduationCap className="text-white w-4 h-4" />
+        <div className="h-20 flex items-center justify-between px-6 border-b border-white/5 shrink-0 w-full">
+           <div className="flex items-center">
+             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-accent to-emerald-300 flex items-center justify-center mr-3">
+               <GraduationCap className="text-white w-4 h-4" />
+             </div>
+             <span className="text-xl font-heading font-bold text-white tracking-tight">Gramatek</span>
            </div>
-           <span className="text-xl font-heading font-bold text-white tracking-tight">Gramatek</span>
+           <NotificationBell />
         </div>
 
         {/* Navigation */}
@@ -32,7 +36,7 @@ export default async function StudentLayout({
             <LayoutDashboard className="w-5 h-5 group-hover:text-brand-accent transition-colors" />
             <span className="font-medium">Dashboard</span>
           </Link>
-          <Link href="/student" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors group">
+          <Link href="/student/performance" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors group">
             <FileBadge className="w-5 h-5 group-hover:text-brand-accent transition-colors" />
             <span className="font-medium">My Performance</span>
           </Link>

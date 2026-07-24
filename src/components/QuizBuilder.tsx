@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { saveQuiz } from '@/app/educator/quizzes/actions'
-import { ArrowLeft, Save, FileQuestion, Plus, Trash2, GripVertical, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Save, FileQuestion, Plus, Trash2, GripVertical, CheckCircle2, Clock, Swords, CalendarClock, Trophy, Zap, Shuffle, Shield, Target } from 'lucide-react'
 import Link from 'next/link'
 
 type QuestionType = 'multiple_choice' | 'fill_blank' | 'enumeration'
+type GameMode = 'mastery' | 'scheduled' | 'survival'
 
 interface CardData {
   id: string
@@ -13,15 +14,33 @@ interface CardData {
   text: string
   options?: string[]
   correctAnswer: any
+  timeLimitOverride?: number | null
 }
+
+const GAME_MODES: { id: GameMode; label: string; description: string; icon: any; color: string; bg: string }[] = [
+  { id: 'mastery', label: 'Mastery Mode', description: 'Open practice with limited retakes. Best or average score recorded.', icon: Trophy, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30 hover:border-amber-400' },
+  { id: 'scheduled', label: 'Scheduled Mission', description: 'Set a time window. Students receive notifications and take it individually.', icon: CalendarClock, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/30 hover:border-blue-400' },
+  { id: 'survival', label: 'Survival / Streak', description: 'Streak multipliers reward consistency. Miss too many and you\'re eliminated.', icon: Zap, color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/30 hover:border-rose-400' },
+]
 
 export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: any[], defaultClassroomId?: string }) {
   const [classroomId, setClassroomId] = useState(defaultClassroomId || classrooms[0]?.id || '')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [timeLimit, setTimeLimit] = useState(60) // in seconds
+  const [timeLimit, setTimeLimit] = useState(60)
   const [cards, setCards] = useState<CardData[]>([])
   
+  // Game Mode State
+  const [gameMode, setGameMode] = useState<GameMode>('mastery')
+  const [maxAttempts, setMaxAttempts] = useState<number | null>(3)
+  const [scoringMethod, setScoringMethod] = useState<'highest' | 'average'>('highest')
+  const [scheduledStart, setScheduledStart] = useState('')
+  const [scheduledEnd, setScheduledEnd] = useState('')
+  const [survivalStrikes, setSurvivalStrikes] = useState(3)
+  const [streakMultiplier, setStreakMultiplier] = useState(true)
+  const [shuffleQuestions, setShuffleQuestions] = useState(false)
+  const [shuffleOptions, setShuffleOptions] = useState(false)
+
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const addCard = (type: QuestionType) => {
@@ -30,7 +49,8 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
       type,
       text: '',
       options: type === 'multiple_choice' ? ['', '', '', ''] : undefined,
-      correctAnswer: type === 'multiple_choice' ? 0 : type === 'enumeration' ? [] : ''
+      correctAnswer: type === 'multiple_choice' ? 0 : type === 'enumeration' ? [] : '',
+      timeLimitOverride: null,
     }
     setCards([...cards, newCard])
   }
@@ -46,16 +66,32 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
   const handleSave = async (is_published: boolean) => {
     if (!classroomId || !title) return alert('Classroom and Title are required.')
     if (cards.length === 0) return alert('Add at least one question.')
+    if (gameMode === 'scheduled') {
+      if (!scheduledStart || !scheduledEnd) return alert('Scheduled missions require a start and end time.')
+      if (new Date(scheduledEnd) <= new Date(scheduledStart)) return alert('End time must be after start time.')
+    }
     
     setIsSubmitting(true)
     try {
-      await saveQuiz(classroomId, title, description, timeLimit, is_published, cards)
+      await saveQuiz(classroomId, title, description, timeLimit, is_published, cards, {
+        gameMode,
+        maxAttempts: gameMode === 'mastery' ? maxAttempts : null,
+        scoringMethod: gameMode === 'mastery' ? scoringMethod : 'highest',
+        scheduledStart: gameMode === 'scheduled' ? scheduledStart : null,
+        scheduledEnd: gameMode === 'scheduled' ? scheduledEnd : null,
+        survivalStrikes: gameMode === 'survival' ? survivalStrikes : 3,
+        streakMultiplier: gameMode === 'survival' ? streakMultiplier : false,
+        shuffleQuestions,
+        shuffleOptions,
+      })
     } catch (e) {
       console.error(e)
       setIsSubmitting(false)
       alert('Failed to save quiz.')
     }
   }
+
+  const selectedMode = GAME_MODES.find(m => m.id === gameMode)!
 
   return (
     <div className="p-8 max-w-4xl mx-auto animate-fade-in relative z-10">
@@ -83,7 +119,147 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
         </div>
       </div>
 
-      {/* Quiz Settings */}
+      {/* ── Game Mode Selector ── */}
+      <div className="glass-strong rounded-3xl p-8 mb-8 border border-white/10 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-64 h-64 bg-brand-primary/10 rounded-full blur-[80px] -ml-32 -mt-32 pointer-events-none" />
+        
+        <h2 className="text-2xl font-heading font-bold text-white mb-2 relative z-10 flex items-center gap-2">
+          <Swords className="w-6 h-6 text-brand-primary" />
+          Game Mode
+        </h2>
+        <p className="text-slate-400 text-sm mb-6 relative z-10">Choose how students will experience this quiz.</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+          {GAME_MODES.map((mode) => {
+            const Icon = mode.icon
+            const isSelected = gameMode === mode.id
+            return (
+              <button
+                key={mode.id}
+                onClick={() => setGameMode(mode.id)}
+                className={`p-5 rounded-2xl border-2 text-left transition-all duration-200 ${isSelected ? `${mode.bg} scale-[1.02] shadow-lg ring-1 ring-white/10` : 'bg-white/[0.02] border-white/10 hover:bg-white/5'}`}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <Icon className={`w-5 h-5 ${isSelected ? mode.color : 'text-slate-400'}`} />
+                  <span className={`font-heading font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>{mode.label}</span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">{mode.description}</p>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Mode-Specific Settings ── */}
+      {gameMode === 'mastery' && (
+        <div className="glass rounded-2xl p-6 mb-8 border border-amber-500/20 animate-slide-up">
+          <h3 className="text-lg font-heading font-bold text-amber-400 mb-4 flex items-center gap-2">
+            <Trophy className="w-5 h-5" /> Mastery Settings
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-300">Max Attempts</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={1}
+                  max={99}
+                  value={maxAttempts ?? ''}
+                  onChange={(e) => setMaxAttempts(e.target.value ? Number(e.target.value) : null)}
+                  placeholder="Unlimited"
+                  className="w-28 bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white text-center focus:outline-none focus:border-amber-500 transition-all"
+                />
+                <span className="text-slate-400 text-sm">retries per student (empty = unlimited)</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-300">Scoring Method</label>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setScoringMethod('highest')}
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all border ${scoringMethod === 'highest' ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                >
+                  🏆 Highest Score
+                </button>
+                <button
+                  onClick={() => setScoringMethod('average')}
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all border ${scoringMethod === 'average' ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                >
+                  📊 Average Score
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {gameMode === 'scheduled' && (
+        <div className="glass rounded-2xl p-6 mb-8 border border-blue-500/20 animate-slide-up">
+          <h3 className="text-lg font-heading font-bold text-blue-400 mb-4 flex items-center gap-2">
+            <CalendarClock className="w-5 h-5" /> Schedule Window
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-300">Opens At</label>
+              <input
+                type="datetime-local"
+                value={scheduledStart}
+                onChange={(e) => setScheduledStart(e.target.value)}
+                className="bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all [color-scheme:dark]"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-300">Closes At</label>
+              <input
+                type="datetime-local"
+                value={scheduledEnd}
+                onChange={(e) => setScheduledEnd(e.target.value)}
+                className="bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all [color-scheme:dark]"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 mt-3">Students enrolled in this classroom will receive a notification when the quiz becomes available.</p>
+        </div>
+      )}
+
+      {gameMode === 'survival' && (
+        <div className="glass rounded-2xl p-6 mb-8 border border-rose-500/20 animate-slide-up">
+          <h3 className="text-lg font-heading font-bold text-rose-400 mb-4 flex items-center gap-2">
+            <Zap className="w-5 h-5" /> Survival Settings
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                <Shield className="w-4 h-4 text-rose-400" /> Strikes Before Elimination
+              </label>
+              <div className="flex items-center gap-3">
+                {[1, 2, 3, 5].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setSurvivalStrikes(n)}
+                    className={`w-12 h-12 rounded-xl border text-lg font-bold transition-all ${survivalStrikes === n ? 'bg-rose-500/20 border-rose-500/50 text-rose-300' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                <Target className="w-4 h-4 text-rose-400" /> Streak Multiplier
+              </label>
+              <button
+                onClick={() => setStreakMultiplier(!streakMultiplier)}
+                className={`w-full py-3 rounded-xl text-sm font-medium transition-all border ${streakMultiplier ? 'bg-rose-500/20 border-rose-500/50 text-rose-300' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+              >
+                {streakMultiplier ? '🔥 Enabled — Points multiply on streaks' : 'Disabled — Flat scoring'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quiz Settings ── */}
       <div className="glass-strong rounded-3xl p-8 mb-8 border border-white/10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-secondary/10 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
         
@@ -121,19 +297,40 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-slate-300">Time Limit per Question (avg)</label>
-            <select value={timeLimit} onChange={(e) => setTimeLimit(Number(e.target.value))} className="w-full max-w-[250px] bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-secondary transition-all appearance-none">
-               <option value={15}>15 Seconds (Rapid)</option>
-               <option value={30}>30 Seconds (Fast)</option>
-               <option value={60}>1 Minute (Standard)</option>
-               <option value={120}>2 Minutes (Extended)</option>
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-300">Default Time per Question</label>
+              <select value={timeLimit} onChange={(e) => setTimeLimit(Number(e.target.value))} className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-secondary transition-all appearance-none">
+                 <option value={10}>10 Seconds (Blitz)</option>
+                 <option value={15}>15 Seconds (Rapid)</option>
+                 <option value={30}>30 Seconds (Fast)</option>
+                 <option value={60}>1 Minute (Standard)</option>
+                 <option value={120}>2 Minutes (Extended)</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <label className="text-sm font-medium text-slate-300">Shuffle Options</label>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShuffleQuestions(!shuffleQuestions)}
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all border flex items-center justify-center gap-2 ${shuffleQuestions ? 'bg-violet-500/20 border-violet-500/50 text-violet-300' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                >
+                  <Shuffle className="w-4 h-4" /> Questions
+                </button>
+                <button
+                  onClick={() => setShuffleOptions(!shuffleOptions)}
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all border flex items-center justify-center gap-2 ${shuffleOptions ? 'bg-violet-500/20 border-violet-500/50 text-violet-300' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                >
+                  <Shuffle className="w-4 h-4" /> Choices
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Cards (Questions) */}
+      {/* ── Cards (Questions) ── */}
       <div className="space-y-6">
         <h2 className="text-2xl font-heading font-bold text-white flex items-center justify-between">
           <span>Deck Cards ({cards.length})</span>
@@ -147,9 +344,25 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
               </button>
             </div>
             
-            <div className="mb-4 flex items-center gap-2 text-brand-secondary">
-              <GripVertical className="w-4 h-4 text-slate-500 cursor-move" />
-              <span className="font-mono text-sm font-bold uppercase tracking-wider">Card {index + 1} - {card.type.replace('_', ' ')}</span>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-brand-secondary">
+                <GripVertical className="w-4 h-4 text-slate-500 cursor-move" />
+                <span className="font-mono text-sm font-bold uppercase tracking-wider">Card {index + 1} - {card.type.replace('_', ' ')}</span>
+              </div>
+              {/* Per-card timer override */}
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="number"
+                  min={5}
+                  max={300}
+                  placeholder={`${timeLimit}s`}
+                  value={card.timeLimitOverride ?? ''}
+                  onChange={(e) => updateCard(card.id, { timeLimitOverride: e.target.value ? Number(e.target.value) : null })}
+                  className="w-20 bg-slate-900/50 border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-300 text-center focus:outline-none focus:border-brand-secondary placeholder:text-slate-600"
+                />
+                <span className="text-xs text-slate-500">sec</span>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -198,7 +411,7 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
                      onChange={(e) => updateCard(card.id, { correctAnswer: e.target.value })}
                      className="w-full max-w-sm bg-slate-900/50 border border-emerald-500/50 rounded-lg px-4 py-2 text-emerald-400 focus:outline-none focus:border-brand-secondary transition-all"
                   />
-                  <p className="text-xs text-slate-500 mt-2">Make sure to indicate the missing part with "___" in your question text.</p>
+                  <p className="text-xs text-slate-500 mt-2">Make sure to indicate the missing part with &quot;___&quot; in your question text.</p>
                 </div>
               )}
 
