@@ -1,20 +1,23 @@
 import type { Metadata } from "next";
-import { Inter, Outfit } from "next/font/google";
+import { Nunito, Fredoka } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
 });
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Gramatek | Learning, Reimagined.",
-  description: "A gamified educational platform where educators create classrooms and interactive quizzes, and students learn to succeed.",
+  title: "Gramatek | Matuto Habang Naglalaro!",
+  description: "Isang masayang platform kung saan natututo ang mga mag-aaral ng Filipino sa pamamagitan ng mga laro.",
+  icons: {
+    icon: '/logo.png',
+  },
 };
 
 export default function RootLayout({
@@ -23,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${outfit.variable} h-full antialiased`} suppressHydrationWarning>
-      <body className="min-h-full flex flex-col font-sans">
+    <html lang="en" className={`${nunito.variable} ${fredoka.variable} h-full antialiased`} suppressHydrationWarning>
+      <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
         {children}
       </body>
     </html>
