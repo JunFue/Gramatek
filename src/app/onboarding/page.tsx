@@ -23,8 +23,8 @@ export default function OnboardingPage() {
       <div className="w-full max-w-4xl relative z-10 animate-slide-up">
         
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-heading font-bold text-white mb-4">Welcome to Gramatek</h1>
-          <p className="text-lg text-slate-400">How will you be using the platform?</p>
+          <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-brand-primary mb-4 drop-shadow-sm">Welcome to Gramatek</h1>
+          <p className="text-xl text-slate-600 font-medium">How will you be using the platform?</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 w-full">
@@ -33,24 +33,24 @@ export default function OnboardingPage() {
           <button
             onClick={() => setSelectedRole('educator')}
             disabled={isSubmitting}
-            className={`text-left p-8 rounded-3xl transition-all duration-300 border-2 w-full flex flex-col group relative overflow-hidden
+            className={`text-left p-8 rounded-3xl transition-all duration-300 border-2 w-full flex flex-col group relative overflow-hidden shadow-lg
               ${selectedRole === 'educator' 
-                ? 'bg-blue-900/40 border-brand-primary shadow-[0_0_30px_rgba(59,130,246,0.3)]' 
-                : 'glass-strong border-transparent hover:border-brand-primary/50'}
+                ? 'bg-white border-brand-primary ring-4 ring-brand-primary/20 shadow-[0_10px_30px_rgba(37,92,142,0.15)]' 
+                : 'glass-strong border-white/80 hover:border-brand-primary/50 hover:shadow-xl'}
             `}
           >
             {/* Hover Glow */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-brand-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-brand-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             
-            <div className="w-16 h-16 rounded-2xl bg-blue-500/20 flex items-center justify-center mb-8 shrink-0 relative z-10">
-              <BookOpen className={`w-8 h-8 ${selectedRole === 'educator' ? 'text-brand-primary' : 'text-blue-400'}`} />
+            <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center mb-8 shrink-0 relative z-10">
+              <BookOpen className="w-8 h-8 text-brand-primary" />
             </div>
             
             <div className="relative z-10">
-              <h2 className="text-3xl font-heading font-bold text-white mb-3 flex items-center justify-between">
+              <h2 className="text-3xl font-heading font-bold text-slate-800 mb-3 flex items-center justify-between">
                 I'm an Educator
               </h2>
-              <p className="text-slate-400 leading-relaxed min-h-[80px]">
+              <p className="text-slate-600 leading-relaxed font-medium min-h-[80px]">
                 Create interactive classrooms, generate AI quizzes, manage your students, and track their performance.
               </p>
             </div>
@@ -60,24 +60,24 @@ export default function OnboardingPage() {
           <button
             onClick={() => setSelectedRole('learner')}
             disabled={isSubmitting}
-            className={`text-left p-8 rounded-3xl transition-all duration-300 border-2 w-full flex flex-col group relative overflow-hidden
+            className={`text-left p-8 rounded-3xl transition-all duration-300 border-2 w-full flex flex-col group relative overflow-hidden shadow-lg
               ${selectedRole === 'learner' 
-                ? 'bg-emerald-900/40 border-brand-accent shadow-[0_0_30px_rgba(16,185,129,0.3)]' 
-                : 'glass-strong border-transparent hover:border-brand-accent/50'}
+                ? 'bg-white border-emerald-500 ring-4 ring-emerald-500/20 shadow-[0_10px_30px_rgba(16,185,129,0.15)]' 
+                : 'glass-strong border-white/80 hover:border-emerald-400 hover:shadow-xl'}
             `}
           >
             {/* Hover Glow */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-brand-accent/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center mb-8 shrink-0 relative z-10">
-              <GraduationCap className={`w-8 h-8 ${selectedRole === 'learner' ? 'text-brand-accent' : 'text-emerald-400'}`} />
+            <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mb-8 shrink-0 relative z-10">
+              <GraduationCap className="w-8 h-8 text-emerald-600" />
             </div>
             
             <div className="relative z-10">
-              <h2 className="text-3xl font-heading font-bold text-white mb-3 flex items-center justify-between">
+              <h2 className="text-3xl font-heading font-bold text-slate-800 mb-3 flex items-center justify-between">
                 I'm a Learner
               </h2>
-              <p className="text-slate-400 leading-relaxed min-h-[80px]">
+              <p className="text-slate-600 leading-relaxed font-medium min-h-[80px]">
                 Join your teacher's classroom, play fast-paced gamified quizzes, and master new subjects.
               </p>
             </div>
@@ -91,8 +91,8 @@ export default function OnboardingPage() {
             <button
               onClick={() => handleSubmit(selectedRole)}
               disabled={isSubmitting}
-              className={`animate-slide-up px-8 py-4 rounded-full text-white font-semibold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 disabled:opacity-70 disabled:hover:scale-100
-                ${selectedRole === 'educator' ? 'bg-brand-primary shadow-[0_0_20px_rgba(59,130,246,0.5)]' : 'bg-brand-accent shadow-[0_0_20px_rgba(16,185,129,0.5)]'}
+              className={`animate-slide-up px-8 py-4 rounded-full text-white font-extrabold text-lg flex items-center gap-3 transition-all hover:scale-105 active:scale-95 disabled:opacity-70 disabled:hover:scale-100 shadow-xl
+                ${selectedRole === 'educator' ? 'bg-brand-primary hover:bg-brand-primary/90 shadow-[0_8px_25px_rgba(37,92,142,0.35)]' : 'bg-emerald-600 hover:bg-emerald-700 shadow-[0_8px_25px_rgba(16,185,129,0.35)]'}
               `}
             >
               {isSubmitting ? (
@@ -114,3 +114,4 @@ export default function OnboardingPage() {
     </div>
   )
 }
+

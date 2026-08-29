@@ -3,62 +3,69 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { joinClassroom } from '@/app/student/actions'
-import { Plus, Loader2 } from 'lucide-react'
+import { Loader2, Plus, KeyRound } from 'lucide-react'
+import { Translate } from '@/components/Translate'
 
 export function JoinClassroomForm() {
-  const router = useRouter()
-  const [code, setCode] = useState('')
-  const [status, setStatus] = useState<{type: 'error'|'success', message: string} | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+ const router = useRouter()
+ const [code, setCode] = useState('')
+ const [status, setStatus] = useState<{type: 'error'|'success', message: string} | null>(null)
+ const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!code) return
-    setIsSubmitting(true)
-    setStatus(null)
+ const handleSubmit = async (e: React.FormEvent) => {
+ e.preventDefault()
+ if (!code) return
+ setIsSubmitting(true)
+ setStatus(null)
 
-    const formData = new FormData()
-    formData.append('code', code)
-    
-    const res = await joinClassroom(formData)
-    
-    if (res?.error) {
-      setStatus({ type: 'error', message: res.error })
-    } else if (res?.success) {
-       setStatus({ type: 'success', message: 'Successfully joined!' })
-       setCode('')
-       router.refresh() // Force re-fetch of server component data
-       setTimeout(() => setStatus(null), 3000)
-    }
-    
-    setIsSubmitting(false)
-  }
+ const formData = new FormData()
+ formData.append('code', code)
+ 
+ const res = await joinClassroom(formData)
+ 
+ if (res?.error) {
+ setStatus({ type: 'error', message: res.error })
+ } else if (res?.success) {
+ setStatus({ type: 'success', message: 'Successfully joined!' })
+ setCode('')
+ router.refresh() // Force re-fetch of server component data
+ setTimeout(() => setStatus(null), 3000)
+ }
+ 
+ setIsSubmitting(false)
+ }
 
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
-      <div className="flex-1 flex flex-col">
-        <input 
-          type="text" 
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="Enter 6-digit code..."
-          maxLength={6}
-          className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-all font-mono tracking-widest uppercase"
-        />
-        {status && (
-          <p className={`mt-2 text-sm ${status.type === 'error' ? 'text-red-400' : 'text-emerald-400'}`}>
-            {status.message}
-          </p>
-        )}
-      </div>
-      <button 
-        type="submit" 
-        disabled={isSubmitting || code.length < 6}
-        className="px-6 py-3 bg-brand-accent hover:bg-emerald-500 text-white font-medium rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 shrink-0 flex items-center justify-center gap-2 h-[50px]"
-      >
-        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-        Join Room
-      </button>
-    </form>
-  )
+ return (
+ <form onSubmit={handleSubmit} className="space-y-4">
+ <div>
+ <input
+ type="text"
+ value={code}
+ onChange={(e) => setCode(e.target.value.toUpperCase())}
+ placeholder="HAL: CLASS-1234"
+ required
+ className="w-full px-4 py-3 bg-white/80 border-2 border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 font-extrabold focus:outline-none focus:border-brand-primary transition-all shadow-inner tracking-widest text-center uppercase"
+ />
+ </div>
+
+ {status?.type === 'error' && (
+ <p className="text-sm font-bold text-red-500 bg-red-500/10 p-3 rounded-xl border border-red-500/20">{status.message}</p>
+ )}
+
+ <button
+ type="submit"
+ disabled={isSubmitting}
+ className="w-full py-3.5 bg-gradient-to-r from-brand-primary via-brand-secondary to-amber-400 hover:opacity-90 text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-lg disabled:opacity-50"
+ >
+ {isSubmitting ? (
+ <Loader2 className="w-5 h-5 animate-spin" />
+ ) : (
+ <>
+ <KeyRound className="w-5 h-5" />
+ <span><Translate fil="Pumaloob Na" en="Join Now" /></span>
+ </>
+ )}
+ </button>
+ </form>
+ )
 }

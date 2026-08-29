@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { BarChart3, TrendingUp, Users, Target, BookOpen } from 'lucide-react'
 import Link from 'next/link'
+import { Translate } from '@/components/Translate'
 
 export default async function EducatorAnalyticsPage() {
   const supabase = await createClient()
@@ -43,53 +44,53 @@ export default async function EducatorAnalyticsPage() {
   return (
     <div className="p-8 max-w-6xl mx-auto animate-fade-in relative z-10">
       <header className="mb-10">
-        <h1 className="text-3xl font-heading font-bold text-white mb-2 flex items-center gap-3">
-          <BarChart3 className="w-8 h-8 text-brand-secondary" /> Global Analytics
+        <h1 className="text-3xl font-heading font-bold text-slate-900 mb-2 flex items-center gap-3">
+          <BarChart3 className="w-8 h-8 text-brand-primary" /> <Translate fil="Pandaigdigang Analitika" en="Global Analytics" />
         </h1>
-        <p className="text-slate-400">Overview of student performance across all your classrooms.</p>
+        <p className="text-slate-600 font-medium"><Translate fil="Pangkalahatang-ideya ng pagganap ng mag-aaral sa lahat ng iyong silid-aralan." en="Overview of student performance across all your classrooms." /></p>
       </header>
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <div className="glass-strong rounded-3xl p-8 border border-white/10 relative overflow-hidden">
+        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-md relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
           <div className="flex items-center gap-4 mb-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-400" />
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100">
+              <Users className="w-6 h-6 text-blue-500" />
             </div>
-            <h3 className="text-slate-400 font-medium text-lg">Total Students</h3>
+            <h3 className="text-slate-600 font-bold text-lg"><Translate fil="Kabuuang Mag-aaral" en="Total Students" /></h3>
           </div>
-          <p className="text-5xl font-heading font-black text-white relative z-10">{studentCount || 0}</p>
+          <p className="text-5xl font-heading font-black text-slate-900 relative z-10">{studentCount || 0}</p>
         </div>
 
-        <div className="glass-strong rounded-3xl p-8 border border-white/10 relative overflow-hidden">
+        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-md relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
           <div className="flex items-center gap-4 mb-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
-              <Target className="w-6 h-6 text-emerald-400" />
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center border border-emerald-100">
+              <Target className="w-6 h-6 text-emerald-500" />
             </div>
-            <h3 className="text-slate-400 font-medium text-lg">Avg Score</h3>
+            <h3 className="text-slate-600 font-bold text-lg"><Translate fil="Karaniwang Iskor" en="Avg Score" /></h3>
           </div>
-          <p className="text-5xl font-heading font-black text-white relative z-10">{avgScore}%</p>
+          <p className="text-5xl font-heading font-black text-slate-900 relative z-10">{avgScore}%</p>
         </div>
 
-        <div className="glass-strong rounded-3xl p-8 border border-white/10 relative overflow-hidden">
+        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-md relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
           <div className="flex items-center gap-4 mb-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-violet-500/20 flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-violet-400" />
+            <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center border border-violet-100">
+              <TrendingUp className="w-6 h-6 text-violet-500" />
             </div>
-            <h3 className="text-slate-400 font-medium text-lg">Total Attempts</h3>
+            <h3 className="text-slate-600 font-bold text-lg"><Translate fil="Kabuuang Pagtatangka" en="Total Attempts" /></h3>
           </div>
-          <p className="text-5xl font-heading font-black text-white relative z-10">{totalAttempts}</p>
+          <p className="text-5xl font-heading font-black text-slate-900 relative z-10">{totalAttempts}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* Recent Activity Feed */}
-        <div className="glass rounded-3xl p-8 border border-white/5">
-          <h2 className="text-xl font-heading font-bold text-white mb-6">Recent Activity</h2>
+        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+          <h2 className="text-xl font-heading font-bold text-slate-900 mb-6"><Translate fil="Mga Huling Aktibidad" en="Recent Activity" /></h2>
           
           <div className="space-y-4">
             {validAttempts.slice(0, 5).map(attempt => {
@@ -97,17 +98,17 @@ export default async function EducatorAnalyticsPage() {
               const isPassing = pct >= 60
 
               return (
-                <div key={attempt.id} className="bg-slate-900/50 rounded-2xl p-4 flex items-center justify-between border border-white/5">
+                <div key={attempt.id} className="bg-slate-50 rounded-2xl p-4 flex items-center justify-between border border-slate-200 shadow-sm">
                    <div className="flex items-center gap-4">
-                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold ${isPassing ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-500'}`}>
+                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold border ${isPassing ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
                        {Math.round(pct)}%
                      </div>
                      <div>
-                       <h4 className="text-white font-medium">{(attempt.quizzes as any)?.title || 'Unknown Quiz'}</h4>
-                       <p className="text-sm text-slate-400">Score: {attempt.score}/{attempt.total_questions}</p>
+                       <h4 className="text-slate-900 font-bold">{(attempt.quizzes as any)?.title || 'Unknown Quiz'}</h4>
+                       <p className="text-sm font-medium text-slate-500"><Translate fil="Iskor" en="Score" />: {attempt.score}/{attempt.total_questions}</p>
                      </div>
                    </div>
-                   <div className="text-right text-xs text-slate-500">
+                   <div className="text-right text-xs font-bold text-slate-400">
                      {new Date(attempt.created_at).toLocaleDateString()}
                    </div>
                 </div>
@@ -117,17 +118,17 @@ export default async function EducatorAnalyticsPage() {
             {validAttempts.length === 0 && (
               <div className="text-center py-12 text-slate-500">
                 <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-50" />
-                No quiz attempts yet.
+                <Translate fil="Wala pang nagtatangkang kumuha ng pagsusulit." en="No quiz attempts yet." />
               </div>
             )}
           </div>
         </div>
 
         {/* Placeholder for deeper drill downs */}
-        <div className="glass rounded-3xl p-8 border border-white/5 flex flex-col items-center justify-center text-center">
-          <BarChart3 className="w-16 h-16 text-slate-700 mb-4" />
-          <h2 className="text-xl font-heading font-bold text-white mb-2">Student Drill-Downs (Phase 2)</h2>
-          <p className="text-slate-400 max-w-sm">Detailed student-by-student mastery tracking and growth over time will be dropping in the next major update.</p>
+        <div className="bg-slate-50 rounded-3xl p-8 border border-slate-200 flex flex-col items-center justify-center text-center shadow-sm">
+          <BarChart3 className="w-16 h-16 text-slate-300 mb-4" />
+          <h2 className="text-xl font-heading font-bold text-slate-600 mb-2">Student Drill-Downs (Phase 2)</h2>
+          <p className="text-slate-500 max-w-sm font-medium">Detailed student-by-student mastery tracking and growth over time will be dropping in the next major update.</p>
         </div>
 
       </div>

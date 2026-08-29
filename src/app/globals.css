@@ -13,19 +13,25 @@
   --color-background: #F0F8FF; /* Alice Blue, very soft */
 }
 
-/* Base styles */
+/* Base styles without dark mode support */
 @layer base {
   :root {
-    --background: #F4F9FF; /* Soft sky blue background */
-    --foreground: #1e293b; /* Dark slate for high contrast */
+    --background: #F4F9FF; /* Soft sky blue light background */
+    --foreground: #0f172a; /* Slate 900 */
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --card-border: rgba(255, 255, 255, 0.8);
+    --sidebar-bg: #ffffff;
+    --sidebar-border: #e2e8f0;
+    --text-muted: #475569;
   }
 
   body {
     background-color: var(--background);
     color: var(--foreground);
-    background-image: radial-gradient(circle at 10% 20%, rgba(0, 155, 216, 0.1) 0%, transparent 40%),
-                      radial-gradient(circle at 90% 80%, rgba(245, 176, 65, 0.1) 0%, transparent 40%);
+    background-image: radial-gradient(circle at 10% 20%, rgba(0, 155, 216, 0.15) 0%, transparent 40%),
+                      radial-gradient(circle at 90% 80%, rgba(245, 176, 65, 0.15) 0%, transparent 40%);
     background-attachment: fixed;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
@@ -36,21 +42,21 @@
   }
   
   .glass-strong {
-    @apply bg-white/90 backdrop-blur-xl border border-white shadow-[0_4px_25px_rgba(0,0,0,0.08)];
+    @apply bg-white/90 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgba(0,0,0,0.08)];
   }
 
   .glass-subtle {
     @apply bg-white/40 backdrop-blur-sm border border-white/30;
   }
   
-  /* Shared card hover effect */
+  /* Shared card hover effect with fun pop transform for kids */
   .card-hover {
-    @apply transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(37,92,142,0.1)] hover:border-brand-secondary/30;
+    @apply transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(0,155,216,0.15)] hover:border-brand-secondary/40 active:scale-95;
   }
   
   /* Text gradient utility */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-primary to-brand-secondary;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-primary via-brand-secondary to-amber-400;
   }
 }
 

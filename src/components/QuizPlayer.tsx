@@ -5,6 +5,7 @@ import { submitQuizAttempt } from '@/app/student/quiz/actions'
 import { ArrowLeft, Clock, CheckCircle2, XCircle, ChevronRight, Loader2, Play, FileQuestion, Zap, Shield, HeartPulse, Flame, Trophy, CalendarClock } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Translate } from '@/components/Translate'
 
 export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, cards: any[], pastAttemptsCount?: number }) {
   const router = useRouter()
@@ -22,6 +23,9 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
   const [score, setScore] = useState(0)
   const [isFinished, setIsFinished] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+
+  // Sentence Scramble State
+  const [scrambleAnswer, setScrambleAnswer] = useState<string[]>([])
 
   // V2 Specific Modes State
   const [strikes, setStrikes] = useState(0)
@@ -65,6 +69,10 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
       correct = selectedAnswer === card.correct_answer
     } else if (card.question_type === 'fill_blank') {
       correct = textAnswer.trim().toLowerCase() === card.correct_answer.toLowerCase()
+    } else if (card.question_type === 'sentence_scramble') {
+      const normalizedUser = scrambleAnswer.join(' ').toLowerCase().replace(/[.,!?]/g, '').trim()
+      const normalizedCorrect = card.correct_sentence.toLowerCase().replace(/[.,!?]/g, '').trim()
+      correct = normalizedUser === normalizedCorrect
     }
     
     setIsCorrect(correct)
@@ -110,6 +118,7 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
       setIsCorrect(null)
       setSelectedAnswer(null)
       setTextAnswer('')
+      setScrambleAnswer([])
       setTimeLeft(cards[currentIdx + 1]?.time_limit_override || quiz.time_limit_seconds)
     } else {
       finishQuiz()
@@ -141,56 +150,56 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
 
   if (!hasStarted) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center p-6 text-center animate-fade-in bg-gradient-to-br from-background to-slate-900">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-brand-accent/20 rounded-full blur-[120px]" />
-        <div className="max-w-2xl w-full relative z-10 glass-strong p-12 rounded-3xl border border-white/10 flex flex-col items-center shadow-2xl">
+      <div className="absolute inset-0 flex items-center justify-center p-6 text-center animate-fade-in bg-slate-50">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-brand-primary/10 rounded-full blur-[120px]" />
+        <div className="max-w-2xl w-full relative z-10 bg-white p-12 rounded-3xl border border-slate-200 flex flex-col items-center shadow-xl">
            
            {quiz.game_mode === 'mastery' && (
-             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-sm font-medium border border-amber-500/20 mb-6">
-               <Trophy className="w-4 h-4" /> Mastery Mode
+             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-sm font-bold border border-amber-200 mb-6">
+               <Trophy className="w-4 h-4" /> <Translate fil="Mode ng Masteriya" en="Mastery Mode" />
              </span>
            )}
            {quiz.game_mode === 'scheduled' && (
-             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-sm font-medium border border-blue-500/20 mb-6">
-               <CalendarClock className="w-4 h-4" /> Scheduled Mission
+             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-bold border border-blue-200 mb-6">
+               <CalendarClock className="w-4 h-4" /> <Translate fil="Nakatakdang Misyon" en="Scheduled Mission" />
              </span>
            )}
            {quiz.game_mode === 'survival' && (
-             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 text-sm font-medium border border-rose-500/20 mb-6">
-               <Zap className="w-4 h-4" /> Survival Mode
+             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-sm font-bold border border-rose-200 mb-6">
+               <Zap className="w-4 h-4" /> <Translate fil="Mode ng Kaligtasan" en="Survival Mode" />
              </span>
            )}
 
-           <h1 className="text-4xl md:text-5xl font-heading font-bold text-white mb-4 leading-tight">{quiz.title}</h1>
-           <p className="text-slate-400 mb-8 max-w-lg">{quiz.description}</p>
+           <h1 className="text-4xl md:text-5xl font-heading font-black text-slate-900 mb-4 leading-tight">{quiz.title}</h1>
+           <p className="text-slate-600 mb-8 max-w-lg font-medium">{quiz.description}</p>
            
-           <div className="flex flex-wrap items-center justify-center gap-6 mb-10 text-sm font-medium text-slate-300">
-             <div className="flex items-center gap-2 bg-slate-800/50 px-4 py-2 rounded-full border border-white/5">
-                <FileQuestion className="w-5 h-5 text-brand-secondary" /> {cards.length} Questions
+           <div className="flex flex-wrap items-center justify-center gap-6 mb-10 text-sm font-bold text-slate-700">
+             <div className="flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+                <FileQuestion className="w-5 h-5 text-brand-primary" /> {cards.length} <Translate fil="Mga Tanong" en="Questions" />
              </div>
-             <div className="flex items-center gap-2 bg-slate-800/50 px-4 py-2 rounded-full border border-white/5">
-                <Clock className="w-5 h-5 text-orange-400" /> {quiz.time_limit_seconds}s avg
+             <div className="flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+                <Clock className="w-5 h-5 text-orange-500" /> {quiz.time_limit_seconds}s <Translate fil="avg" en="avg" />
              </div>
              {quiz.game_mode === 'survival' && (
-               <div className="flex items-center gap-2 bg-slate-800/50 px-4 py-2 rounded-full border border-white/5">
-                  <Shield className="w-5 h-5 text-rose-400" /> {quiz.survival_strikes} Strikes
+               <div className="flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+                  <Shield className="w-5 h-5 text-rose-500" /> {quiz.survival_strikes} <Translate fil="Strike" en="Strikes" />
                </div>
              )}
            </div>
 
            {quiz.game_mode === 'mastery' && quiz.max_attempts && (
-             <p className="text-amber-400 mb-8">Attempt {pastAttemptsCount + 1} of {quiz.max_attempts}</p>
+             <p className="text-amber-600 font-bold mb-8"><Translate fil="Pagtatangka" en="Attempt" /> {pastAttemptsCount + 1} / {quiz.max_attempts}</p>
            )}
            
-           <button onClick={startQuiz} className="group relative px-10 py-5 bg-brand-accent hover:bg-emerald-500 rounded-full text-white font-bold text-xl transition-all shadow-[0_0_40px_rgba(16,185,129,0.3)] hover:shadow-[0_0_60px_rgba(16,185,129,0.5)] hover:-translate-y-1 hover:scale-105 active:scale-95 duration-200">
+           <button onClick={startQuiz} className="group relative px-10 py-5 bg-brand-primary hover:bg-blue-600 rounded-full text-white font-black text-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-1 hover:scale-105 active:scale-95 duration-200">
              <span className="flex items-center gap-3">
                <Play className="w-6 h-6 fill-white" />
-               START QUIZ
+               <Translate fil="SIMULAN ANG PAGSUSULIT" en="START QUIZ" />
              </span>
            </button>
            
-           <Link href={`/student/classrooms/${quiz.classroom_id}`} className="mt-8 text-slate-500 hover:text-white transition-colors text-sm font-medium">
-             Back to Classroom
+           <Link href={quiz.is_practice ? '/student/practice' : `/student/classrooms/${quiz.classroom_id}`} className="mt-8 text-slate-500 hover:text-slate-800 transition-colors text-sm font-bold">
+             {quiz.is_practice ? <Translate fil="Bumalik sa Pagsasanay" en="Back to Practice Hub" /> : <Translate fil="Bumalik sa Silid-aralan" en="Back to Classroom" />}
            </Link>
         </div>
       </div>
@@ -199,53 +208,59 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
 
   if (isFinished) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center p-6 text-center animate-fade-in bg-gradient-to-br from-background to-slate-900 overflow-y-auto">
-         <div className="max-w-xl w-full relative z-10 glass p-10 rounded-3xl border border-white/10 flex flex-col items-center my-8">
+      <div className="absolute inset-0 flex items-center justify-center p-6 text-center animate-fade-in bg-slate-50 overflow-y-auto">
+         <div className="max-w-xl w-full relative z-10 bg-white p-10 rounded-3xl border border-slate-200 flex flex-col items-center my-8 shadow-xl">
             
-            <h1 className={`text-4xl font-heading font-bold mb-2 ${eliminated ? 'text-rose-500' : 'text-white'}`}>
-              {eliminated ? 'Eliminated!' : 'Quiz Complete!'}
+            <h1 className={`text-4xl font-heading font-black mb-2 ${eliminated ? 'text-rose-600' : 'text-slate-900'}`}>
+              {eliminated ? <Translate fil="Tanggal!" en="Eliminated!" /> : <Translate fil="Tapos na ang Pagsusulit!" en="Quiz Complete!" />}
             </h1>
-            <p className="text-slate-400 mb-10">
-              {eliminated ? `You survived ${currentIdx} rounds.` : "Here's how you did."}
+            <p className="text-slate-600 font-medium mb-10">
+              {eliminated ? <Translate fil={`Nakaligtas ka sa ${currentIdx} na round.`} en={`You survived ${currentIdx} rounds.`} /> : <Translate fil="Narito ang iyong nakuha." en="Here's how you did." />}
             </p>
             
             <div className="relative mb-12">
               <svg className="w-48 h-48 transform -rotate-90">
-                <circle cx="96" cy="96" r="88" className="stroke-slate-800" strokeWidth="12" fill="transparent" />
-                <circle cx="96" cy="96" r="88" className={`transition-all duration-1000 ease-out ${eliminated ? 'stroke-rose-500' : 'stroke-brand-accent'}`} strokeWidth="12" fill="transparent" strokeDasharray="552.92" strokeDashoffset={552.92 - (552.92 * score) / cards.length} />
+                <circle cx="96" cy="96" r="88" className="stroke-slate-100" strokeWidth="12" fill="transparent" />
+                <circle cx="96" cy="96" r="88" className={`transition-all duration-1000 ease-out ${eliminated ? 'stroke-rose-500' : 'stroke-brand-primary'}`} strokeWidth="12" fill="transparent" strokeDasharray="552.92" strokeDashoffset={552.92 - (552.92 * score) / cards.length} />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-900">
                  <span className="text-5xl font-black font-heading tracking-tighter">{score}</span>
-                 <span className="text-slate-400 font-medium">/ {cards.length}</span>
+                 <span className="text-slate-500 font-bold">/ {cards.length}</span>
               </div>
             </div>
 
             {quiz.game_mode === 'survival' && (
               <div className="grid grid-cols-2 gap-4 w-full mb-10">
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
-                  <Flame className="w-6 h-6 text-orange-400 mx-auto mb-2" />
-                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Max Streak</p>
-                  <p className="text-2xl font-bold text-white">{longestStreak}</p>
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm">
+                  <Flame className="w-6 h-6 text-orange-500 mx-auto mb-2" />
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1"><Translate fil="Pinakamahabang Streak" en="Max Streak" /></p>
+                  <p className="text-2xl font-black text-slate-900">{longestStreak}</p>
                 </div>
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
-                  <Zap className="w-6 h-6 text-brand-accent mx-auto mb-2" />
-                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Total Points</p>
-                  <p className="text-2xl font-bold text-white">{streakScore}</p>
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm">
+                  <Zap className="w-6 h-6 text-brand-primary mx-auto mb-2" />
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1"><Translate fil="Kabuuang Puntos" en="Total Points" /></p>
+                  <p className="text-2xl font-black text-slate-900">{streakScore}</p>
                 </div>
               </div>
             )}
 
             {isSaving ? (
-               <div className="flex items-center justify-center text-slate-400 text-sm gap-2">
-                 <Loader2 className="w-4 h-4 animate-spin" /> Saving results...
+               <div className="flex items-center justify-center text-slate-500 font-bold text-sm gap-2">
+                 <Loader2 className="w-4 h-4 animate-spin" /> <Translate fil="Sini-save ang resulta..." en="Saving results..." />
                </div>
             ) : (
                <div className="flex gap-4 w-full">
-                 <Link href={`/student/quiz/${quiz.id}/results`} className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-medium rounded-2xl transition-colors">
-                   View History
-                 </Link>
-                 <Link href={`/student/classrooms/${quiz.classroom_id}`} className="flex-1 py-4 bg-brand-primary hover:bg-blue-500 text-white font-medium rounded-2xl transition-colors shadow-lg shadow-blue-500/20">
-                   Back to Classroom
+                 {quiz.is_practice ? (
+                   <div className="flex-1 py-4 bg-slate-100 text-slate-500 font-bold rounded-2xl text-center border border-slate-200">
+                     <Translate fil="Tala ng Pagsasanay" en="Practice Record" />
+                   </div>
+                 ) : (
+                   <Link href={`/student/quiz/${quiz.id}/results`} className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition-colors text-center border border-slate-200">
+                     <Translate fil="Tingnan ang Kasaysayan" en="View History" />
+                   </Link>
+                 )}
+                 <Link href={`/student/classrooms/${quiz.classroom_id}`} className="flex-1 py-4 bg-brand-primary hover:bg-blue-600 text-white font-bold rounded-2xl transition-colors shadow-md text-center">
+                   <Translate fil="Bumalik sa Silid-aralan" en="Back to Classroom" />
                  </Link>
                </div>
             )}
@@ -261,77 +276,77 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
   const currentMultiplier = quiz.game_mode === 'survival' && quiz.streak_multiplier ? Math.min(1 + Math.floor(currentStreak / 3) * 0.5, 3) : 1
 
   return (
-    <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex flex-col relative overflow-hidden">
       
-      <div className={`absolute inset-0 transition-colors duration-500 ${isEvaluating ? (isCorrect ? 'bg-emerald-500/10' : 'bg-red-500/10') : 'bg-transparent'}`} />
+      <div className={`absolute inset-0 transition-colors duration-500 ${isEvaluating ? (isCorrect ? 'bg-emerald-50' : 'bg-red-50') : 'bg-transparent'}`} />
 
       {/* Top Header */}
-      <header className="h-20 w-full px-6 flex items-center justify-between relative z-10 glass-subtle border-b border-white/5">
-         <div className="flex items-center gap-4 text-slate-400">
-           <Link href={`/student/classrooms/${quiz.classroom_id}`} className="hover:text-white transition-colors">
+      <header className="h-20 w-full px-6 flex items-center justify-between relative z-10 bg-white shadow-sm border-b border-slate-200">
+         <div className="flex items-center gap-4 text-slate-500">
+           <Link href={`/student/classrooms/${quiz.classroom_id}`} className="hover:text-brand-primary transition-colors">
              <ArrowLeft className="w-5 h-5" />
            </Link>
-           <span className="font-heading font-medium tracking-wide">Q. {currentIdx + 1} / {cards.length}</span>
+           <span className="font-heading font-medium tracking-wide font-bold">Q. {currentIdx + 1} / {cards.length}</span>
          </div>
 
          {/* V2 Survival Mode HUD */}
          {quiz.game_mode === 'survival' && (
            <div className="flex items-center gap-8">
              {quiz.streak_multiplier && currentStreak > 0 && (
-               <div className="flex items-center gap-2 text-orange-400 font-bold bg-orange-500/10 px-3 py-1 rounded-full animate-fade-in border border-orange-500/20">
+               <div className="flex items-center gap-2 text-orange-500 font-bold bg-orange-50 px-3 py-1 rounded-full animate-fade-in border border-orange-200 shadow-sm">
                  <Flame className="w-4 h-4" /> 
                  {currentMultiplier}x 
-                 <span className="text-xs opacity-75 font-normal ml-1">({currentStreak} streak)</span>
+                 <span className="text-xs opacity-75 font-medium ml-1">({currentStreak} <Translate fil="streak" en="streak" />)</span>
                </div>
              )}
              <div className="flex items-center gap-2">
                {[...Array(quiz.survival_strikes)].map((_, i) => (
-                 <HeartPulse key={i} className={`w-5 h-5 ${i < (quiz.survival_strikes - strikes) ? 'text-rose-500 fill-rose-500' : 'text-slate-700'}`} />
+                 <HeartPulse key={i} className={`w-5 h-5 ${i < (quiz.survival_strikes - strikes) ? 'text-rose-500 fill-rose-500' : 'text-slate-300'}`} />
                ))}
              </div>
            </div>
          )}
          
          <div className="flex items-center gap-3">
-           <Clock className={`w-5 h-5 ${timeLeft <= 5 ? 'text-red-400 animate-pulse' : 'text-slate-400'}`} />
-           <span className={`font-mono text-xl font-bold ${timeLeft <= 5 ? 'text-red-400' : 'text-white'}`}>{timeLeft}</span>
+           <Clock className={`w-5 h-5 ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-500'}`} />
+           <span className={`font-mono text-xl font-bold ${timeLeft <= 5 ? 'text-red-500' : 'text-slate-900'}`}>{timeLeft}</span>
          </div>
       </header>
 
       {/* Progress Bar */}
-      <div className="w-full h-1.5 bg-slate-800 relative z-10">
-        <div className="h-full bg-gradient-to-r from-brand-primary to-brand-accent transition-all duration-300" style={{ width: `${progressPct}%` }} />
+      <div className="w-full h-1.5 bg-slate-200 relative z-10">
+        <div className="h-full bg-brand-primary transition-all duration-300 shadow-[0_0_10px_rgba(37,99,235,0.5)]" style={{ width: `${progressPct}%` }} />
       </div>
 
       {/* Main Play Area */}
       <main className="flex-1 flex flex-col items-center justify-center p-6 relative z-10">
          
          {eliminated ? (
-           <div className="text-center animate-fade-in">
-             <XCircle className="w-24 h-24 text-rose-500 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(244,63,94,0.5)]" />
-             <h2 className="text-4xl font-heading font-bold text-white mb-2">Eliminated!</h2>
-             <p className="text-slate-400 mb-8">You ran out of lives.</p>
-             <button onClick={finishQuiz} className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full font-medium transition-all">
-               Continue to Results
+           <div className="text-center animate-fade-in bg-white p-12 rounded-3xl border border-slate-200 shadow-xl">
+             <XCircle className="w-24 h-24 text-rose-500 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(244,63,94,0.3)]" />
+             <h2 className="text-4xl font-heading font-black text-slate-900 mb-2"><Translate fil="Tanggal!" en="Eliminated!" /></h2>
+             <p className="text-slate-600 font-medium mb-8"><Translate fil="Wala ka nang buhay." en="You ran out of lives." /></p>
+             <button onClick={finishQuiz} className="px-8 py-3 bg-brand-primary hover:bg-blue-600 shadow-md text-white rounded-full font-bold transition-all">
+               <Translate fil="Magpatuloy sa Resulta" en="Continue to Results" />
              </button>
            </div>
          ) : (
-           <div className="w-full max-w-3xl glass-strong rounded-3xl p-8 md:p-12 border border-white/10 shadow-2xl relative animate-slide-up" key={currentIdx}>
+           <div className="w-full max-w-3xl bg-white rounded-3xl p-8 md:p-12 border border-slate-200 shadow-xl relative animate-slide-up" key={currentIdx}>
              
-             <h2 className="text-2xl md:text-3xl font-medium text-white mb-10 text-center leading-relaxed">
+             <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-10 text-center leading-relaxed">
                {card?.question_text}
              </h2>
 
              {card?.question_type === 'multiple_choice' && card.options && (
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  {card.options.map((opt: string, idx: number) => {
-                   let btnClass = "bg-white/5 hover:bg-white/10 border-white/10 text-white"
-                   if (selectedAnswer === idx) btnClass = "bg-white/20 border-white/30 text-white shadow-lg"
+                   let btnClass = "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm"
+                   if (selectedAnswer === idx) btnClass = "bg-blue-50 border-blue-200 text-brand-primary shadow-md"
                    
                    if (isEvaluating) {
-                     if (card.correct_answer === idx) btnClass = "bg-emerald-500 text-white border-emerald-400 scale-105 shadow-xl shadow-emerald-500/20"
-                     else if (selectedAnswer === idx) btnClass = "bg-red-500/20 text-red-500 border-red-500/50"
-                     else btnClass = "bg-white/5 border-white/5 text-slate-500 opacity-50"
+                     if (card.correct_answer === idx) btnClass = "bg-emerald-500 text-white border-emerald-500 scale-105 shadow-xl shadow-emerald-500/20 font-bold"
+                     else if (selectedAnswer === idx) btnClass = "bg-red-50 text-red-600 border-red-200 shadow-sm font-bold"
+                     else btnClass = "bg-slate-50 border-slate-200 text-slate-400 opacity-50 shadow-none"
                    }
 
                    return (
@@ -355,20 +370,24 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
                    value={textAnswer}
                    onChange={(e) => setTextAnswer(e.target.value)}
                    disabled={isEvaluating}
-                   placeholder="Type your answer..."
-                   className={`w-full bg-slate-900/50 border rounded-2xl px-6 py-5 text-xl font-medium text-center focus:outline-none transition-all ${
+                   placeholder="I-type ang iyong sagot..."
+                   className={`w-full bg-white border rounded-2xl px-6 py-5 text-xl font-bold text-center shadow-sm focus:outline-none transition-all ${
                      isEvaluating 
                        ? isCorrect 
-                         ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' 
-                         : 'border-red-500 text-red-400 bg-red-500/10'
-                       : 'border-white/20 text-white focus:border-brand-primary'
+                         ? 'border-emerald-500 text-emerald-700 bg-emerald-50' 
+                         : 'border-red-500 text-red-700 bg-red-50'
+                       : 'border-slate-300 text-slate-900 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary'
                    }`}
                    onKeyDown={(e) => {
                      if (e.key === 'Enter' && textAnswer.trim()) submitAnswer()
                    }}
                  />
                  {isEvaluating && !isCorrect && (
-                   <p className="mt-4 text-emerald-400 font-medium">Correct answer: {card.correct_answer}</p>
+                   <div className="mt-4 flex flex-col items-center">
+                      <p className="text-emerald-700 font-bold shadow-sm inline-block px-4 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+                        <Translate fil="Tamang sagot" en="Correct answer" />: {card.correct_answer}
+                      </p>
+                   </div>
                  )}
                </div>
              )}
@@ -376,11 +395,11 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
              {isEvaluating && (
                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center animate-fade-in pointer-events-none">
                  {isCorrect ? (
-                   <div className="bg-emerald-500/20 backdrop-blur text-emerald-400 p-8 rounded-full border border-emerald-500/30 animate-pulse">
+                   <div className="bg-white/80 backdrop-blur text-emerald-500 p-8 rounded-full border border-emerald-200 shadow-[0_0_30px_rgba(16,185,129,0.3)] animate-pulse">
                       <CheckCircle2 className="w-24 h-24" />
                    </div>
                  ) : (
-                   <div className="bg-red-500/20 backdrop-blur text-red-400 p-8 rounded-full border border-red-500/30 animate-pulse">
+                   <div className="bg-white/80 backdrop-blur text-red-500 p-8 rounded-full border border-red-200 shadow-[0_0_30px_rgba(239,68,68,0.3)] animate-pulse">
                       <XCircle className="w-24 h-24" />
                    </div>
                  )}
@@ -391,14 +410,14 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
          )}
          
          {!isEvaluating && !eliminated && (
-           <div className="mt-10 h-16 pointer-events-none w-full max-w-3xl flex justify-end">
+           <div className="mt-10 h-16 pointer-events-none w-full max-w-3xl flex justify-end relative z-20">
              {((card?.question_type === 'multiple_choice' && selectedAnswer !== null) || 
                (card?.question_type === 'fill_blank' && textAnswer.trim() !== '')) && (
                <button 
                  onClick={submitAnswer}
-                 className="pointer-events-auto px-8 py-4 bg-brand-primary hover:bg-blue-500 text-white rounded-full font-bold tracking-wide shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:-translate-y-1 transition-all flex items-center gap-2 animate-slide-up"
+                 className="pointer-events-auto px-8 py-4 bg-brand-primary hover:bg-blue-600 text-white rounded-full font-black tracking-wide shadow-[0_4px_20px_rgba(37,99,235,0.4)] hover:shadow-[0_6px_25px_rgba(37,99,235,0.5)] hover:-translate-y-1 transition-all flex items-center gap-2 animate-slide-up"
                >
-                 SUBMIT <ChevronRight className="w-5 h-5" />
+                 <Translate fil="IPASAGOT" en="SUBMIT" /> <ChevronRight className="w-5 h-5" />
                </button>
              )}
            </div>

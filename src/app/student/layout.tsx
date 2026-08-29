@@ -1,8 +1,7 @@
-import { GraduationCap, LayoutDashboard, LogOut, FileBadge } from 'lucide-react'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { NotificationBell } from '@/components/NotificationBell'
-import { signOut } from '../auth/actions'
+import { LanguageToggle } from '@/components/LanguageToggle'
+import { StudentSidebar } from '@/components/StudentSidebar'
 
 export default async function StudentLayout({
   children,
@@ -14,61 +13,26 @@ export default async function StudentLayout({
   const { data: profile } = await supabase.from('profiles').select('full_name, avatar_url').eq('id', user?.id).single()
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row overflow-hidden transition-colors duration-300">
       
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 glass border-r border-white/5 flex flex-col z-20 shrink-0">
-        
-        {/* Brand */}
-        <div className="h-20 flex items-center justify-between px-6 border-b border-white/5 shrink-0 w-full">
-           <div className="flex items-center">
-             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-accent to-emerald-300 flex items-center justify-center mr-3">
-               <GraduationCap className="text-white w-4 h-4" />
-             </div>
-             <span className="text-xl font-heading font-bold text-white tracking-tight">Gramatek</span>
-           </div>
-           <NotificationBell />
-        </div>
-
-        {/* Navigation */}
-        <div className="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-2">
-          <Link href="/student" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors group">
-            <LayoutDashboard className="w-5 h-5 group-hover:text-brand-accent transition-colors" />
-            <span className="font-medium">Dashboard</span>
-          </Link>
-          <Link href="/student/performance" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors group">
-            <FileBadge className="w-5 h-5 group-hover:text-brand-accent transition-colors" />
-            <span className="font-medium">My Performance</span>
-          </Link>
-        </div>
-
-        {/* User & Sign Out */}
-        <div className="p-4 border-t border-white/5 shrink-0">
-          <form action={signOut}>
-            <button type="submit" className="flex items-center gap-3 px-4 py-3 w-full rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors group">
-              <LogOut className="w-5 h-5" />
-              <span className="font-medium">Sign Out</span>
-            </button>
-          </form>
-          <div className="mt-4 px-4 flex items-center gap-3">
-             <div className="w-8 h-8 rounded-full bg-emerald-500/20 overflow-hidden shrink-0">
-               {profile?.avatar_url && <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />}
-             </div>
-             <div className="flex-1 min-w-0">
-               <p className="text-sm font-medium text-white truncate">{profile?.full_name || 'Student'}</p>
-             </div>
-          </div>
-        </div>
-
-      </aside>
+      {/* Sidebar Navigation */}
+      <StudentSidebar profile={profile} />
 
       {/* Main Content Area */}
-      <main className="flex-1 relative z-10 h-screen overflow-y-auto">
-        {/* Subtle background glow specific to student */}
-        <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-brand-accent/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <main className="flex-1 relative z-10 h-screen overflow-y-auto w-full custom-scrollbar">
+        {/* Dynamic header for mobile or top right controls */}
+        <div className="w-full h-20 px-8 flex items-center justify-end absolute top-0 pointer-events-none z-40">
+           <div className="flex items-center gap-3 pointer-events-auto bg-white/70 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200 shadow-sm mt-4 mr-4">
+             <LanguageToggle />
+             <div className="w-px h-6 bg-slate-200 mx-1"></div>
+             <NotificationBell />
+           </div>
+        </div>
+
         {children}
       </main>
 
     </div>
   )
 }
+
