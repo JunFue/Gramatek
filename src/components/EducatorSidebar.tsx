@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { LayoutDashboard, Users, BarChart3, FileQuestion, LogOut, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react'
-import { signOut } from '@/app/auth/actions'
+import { SignOutButton } from '@/components/SignOutButton'
 import { Translate } from '@/components/Translate'
+import { SidebarNotification } from '@/components/SidebarNotification'
+import { SidebarLanguageToggle } from '@/components/SidebarLanguageToggle'
 
 interface EducatorSidebarProps {
   profile: any
@@ -44,8 +46,8 @@ export function EducatorSidebar({ profile }: EducatorSidebarProps) {
         {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>
 
-      {/* Navigation */}
-      <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-2 overflow-x-hidden pt-10">
+      {/* Navigation & Sidebar Actions */}
+      <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-2 overflow-x-hidden pt-6">
         <NavLink href="/educator" icon={LayoutDashboard} isCollapsed={isCollapsed}>
           <Translate fil="Dashboard" en="Dashboard" />
         </NavLink>
@@ -58,16 +60,17 @@ export function EducatorSidebar({ profile }: EducatorSidebarProps) {
         <NavLink href="/educator/quizzes/new" icon={FileQuestion} isCollapsed={isCollapsed} highlight>
           <Translate fil="Gawa ng Pagsusulit" en="Create Quiz" />
         </NavLink>
+
+        {/* Utilities Section */}
+        <div className="my-3 border-t border-white/10 pt-3 flex flex-col gap-2">
+          <SidebarNotification isCollapsed={isCollapsed} />
+          <SidebarLanguageToggle isCollapsed={isCollapsed} />
+        </div>
       </div>
 
       {/* User & Sign Out */}
       <div className="p-4 border-t border-white/10 shrink-0">
-        <form action={signOut}>
-          <button type="submit" className={`flex items-center gap-3 py-3 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-colors group font-medium w-full ${isCollapsed ? 'justify-center px-0' : 'px-4'}`}>
-            <LogOut className="w-5 h-5 shrink-0" />
-            {!isCollapsed && <span className="whitespace-nowrap"><Translate fil="Mag-sign Out" en="Sign Out" /></span>}
-          </button>
-        </form>
+        <SignOutButton isCollapsed={isCollapsed} />
         
         <div className={`mt-4 flex items-center gap-3 ${isCollapsed ? 'justify-center' : 'px-4'}`}>
            <div className="w-8 h-8 rounded-full bg-brand-light overflow-hidden shrink-0 flex items-center justify-center font-bold text-brand-primary">

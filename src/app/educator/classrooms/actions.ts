@@ -1,4 +1,4 @@
-'use server'
+﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
@@ -25,7 +25,6 @@ export async function createClassroom(formData: FormData) {
   const description = formData.get('description') as string
   const enrollmentLimit = parseInt(formData.get('enrollment_limit') as string) || 30
   
-  // Basic retry logic for unique constraint on enrollment code (highly unlikely collision but good practice)
   let code = generateEnrollmentCode()
   let attempts = 0
   
@@ -44,14 +43,13 @@ export async function createClassroom(formData: FormData) {
       .single()
 
     if (!error && data) {
-      // Success
       revalidatePath('/educator/classrooms')
       revalidatePath('/educator')
       redirect(`/educator/classrooms/${data.id}`)
       return
     }
 
-    if (error && error.code === '23505') { // Unique violation
+    if (error && error.code === '23505') {
       code = generateEnrollmentCode()
       attempts++
     } else {
@@ -61,4 +59,196 @@ export async function createClassroom(formData: FormData) {
   }
 
   throw new Error('Could not generate unique enrollment code')
+}
+
+export async function updateClassroomDetails(classroomId: string, data: {
+  name: string
+  description?: string
+  enrollment_limit: number
+  is_active: boolean
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Kailangan munang mag-sign in.' }
+  }
+
+  const { error } = await supabase
+    .from('classrooms')
+    .update({
+      name: data.name.trim(),
+      description: data.description?.trim() || null,
+      enrollment_limit: data.enrollment_limit,
+      is_active: data.is_active,
+    })
+    .eq('id', classroomId)
+    .eq('educator_id', user.id)
+
+  if (error) {
+    console.error('Error updating classroom:', error)
+    return { error: error.message || 'Hindi na-update ang silid-aralan.' }
+  }
+
+  revalidatePath(`/educator/classrooms/${classroomId}`)
+  revalidatePath('/educator/classrooms')
+  return { success: true }
+}
+
+export async function regenerateClassroomCode(classroomId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Kailangan munang mag-sign in.' }
+  }
+
+  let attempts = 0
+  let newCode = generateEnrollmentCode()
+
+  while (attempts < 5) {
+    const { error } = await supabase
+      .from('classrooms')
+      .update({ enrollment_code: newCode })
+      .eq('id', classroomId)
+      .eq('educator_id', user.id)
+
+    if (!error) {
+      revalidatePath(`/educator/classrooms/${classroomId}`)
+      return { success: true, newCode }
+    }
+
+    if (error.code === '23505') {
+      newCode = generateEnrollmentCode()
+      attempts++
+    } else {
+      return { error: error.message || 'Hindi nabago ang kodigo.' }
+    }
+  }
+
+  return { error: 'Hindi nakabuo ng natatanging kodigo. Pakisubukan muli.' }
+}
+
+export async function kickStudentFromClassroom(classroomId: string, studentId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Kailangan munang mag-sign in.' }
+  }
+
+  const { data: classroom } = await supabase
+    .from('classrooms')
+    .select('id, name')
+    .eq('id', classroomId)
+    .eq('educator_id', user.id)
+    .single()
+
+  if (!classroom) {
+    return { error: 'Hindi nahanap ang silid-aralan o wala kang pahintulot.' }
+  }
+
+  const { error: deleteError } = await supabase
+    .from('classroom_members')
+    .delete()
+    .eq('classroom_id', classroomId)
+    .eq('student_id', studentId)
+
+  if (deleteError) {
+    console.error('Error removing student:', deleteError)
+    return { error: 'Hindi maalis ang mag-aaral: ' + deleteError.message }
+  }
+
+  try {
+    await supabase.from('notifications').insert({
+      user_id: studentId,
+      title: 'Paunawa mula sa Silid-aralan',
+      body: `Ikaw ay inalis ng guro mula sa silid-aralang "${classroom.name}".`,
+      link: '/student',
+      is_read: false
+    })
+  } catch (err) {
+    console.error('Failed to notify kicked student:', err)
+  }
+
+  revalidatePath(`/educator/classrooms/${classroomId}`)
+  return { success: true }
+}
+
+export async function giveStudentStar(classroomId: string, studentId: string, customMessage?: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Kailangan munang mag-sign in.' }
+  }
+
+  const { data: classroom } = await supabase
+    .from('classrooms')
+    .select('id, name')
+    .eq('id', classroomId)
+    .eq('educator_id', user.id)
+    .single()
+
+  if (!classroom) {
+    return { error: 'Hindi nahanap ang silid-aralan o wala kang pahintulot.' }
+  }
+
+  const starReason = customMessage?.trim() || 'Napakahusay na partisipasyon at aktibong pag-aaral!'
+
+  const { error } = await supabase.from('notifications').insert({
+    user_id: studentId,
+    title: `🌟 Bituin ng Pagkilala sa ${classroom.name}!`,
+    body: `Iginawad ng iyong guro: "${starReason}"`,
+    link: `/student/classrooms/${classroomId}`,
+    is_read: false
+  })
+
+  if (error) {
+    console.error('Error giving star notification:', error)
+    return { error: 'Hindi naipadala ang bituin: ' + error.message }
+  }
+
+  revalidatePath(`/educator/classrooms/${classroomId}`)
+  return { success: true }
+}
+
+export async function giveStudentWarning(classroomId: string, studentId: string, reason: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Kailangan munang mag-sign in.' }
+  }
+
+  if (!reason?.trim()) {
+    return { error: 'Mangyaring ilagay ang dahilan ng paalala o babala.' }
+  }
+
+  const { data: classroom } = await supabase
+    .from('classrooms')
+    .select('id, name')
+    .eq('id', classroomId)
+    .eq('educator_id', user.id)
+    .single()
+
+  if (!classroom) {
+    return { error: 'Hindi nahanap ang silid-aralan o wala kang pahintulot.' }
+  }
+
+  const { error } = await supabase.from('notifications').insert({
+    user_id: studentId,
+    title: `⚠️ Paalala / Babala sa ${classroom.name}`,
+    body: `Mensahe mula sa iyong guro: "${reason.trim()}"`,
+    link: `/student/classrooms/${classroomId}`,
+    is_read: false
+  })
+
+  if (error) {
+    console.error('Error giving warning notification:', error)
+    return { error: 'Hindi naipadala ang babala: ' + error.message }
+  }
+
+  revalidatePath(`/educator/classrooms/${classroomId}`)
+  return { success: true }
 }

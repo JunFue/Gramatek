@@ -1,4 +1,4 @@
-'use server'
+﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -7,7 +7,11 @@ import { headers } from 'next/headers'
 export async function signInWithGoogle(formData: FormData) {
   const supabase = await createClient()
   const headersList = await headers()
-  const origin = headersList.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  
+  // Robust origin detection for Vercel, production, and local environments
+  const host = headersList.get('x-forwarded-host') || headersList.get('host')
+  const proto = headersList.get('x-forwarded-proto') || (host?.includes('localhost') ? 'http' : 'https')
+  const origin = headersList.get('origin') || (host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'))
   
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',

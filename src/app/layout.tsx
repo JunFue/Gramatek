@@ -21,6 +21,8 @@ export const metadata: Metadata = {
 };
 
 import { Providers } from "@/components/Providers";
+import { NavigationProgressBar } from "@/components/NavigationProgressBar";
+import { Suspense } from "react";
 
 export default function RootLayout({
   children,
@@ -31,6 +33,9 @@ export default function RootLayout({
     <html lang="en" className={`${nunito.variable} ${fredoka.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
         <Providers>
+          <Suspense fallback={null}>
+            <NavigationProgressBar />
+          </Suspense>
           {children}
         </Providers>
       </body>

@@ -1,19 +1,21 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
+  const requestUrl = new URL(request.url)
+  const code = requestUrl.searchParams.get('code')
   
-  // if "next" is in param, use it as the redirect URL
-  const next = searchParams.get('next') ?? '/'
+  // Resolve accurate public origin (especially on Vercel / serverless reverse proxies)
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || requestUrl.host
+  const proto = request.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https')
+  const origin = `${proto}://${host}`
 
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
-      // Check if user has a role already
+      // Check user profile role
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user) {
@@ -33,9 +35,11 @@ export async function GET(request: Request) {
           return NextResponse.redirect(`${origin}/student`)
         }
       }
+    } else {
+      console.error('Error exchanging code for session in callback:', error)
     }
   }
 
-  // return the user to an error page with instructions
+  // If code exchange failed or no code was provided
   return NextResponse.redirect(`${origin}/auth/auth-code-error`)
 }

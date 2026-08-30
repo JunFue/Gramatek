@@ -244,9 +244,9 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
 
   if (!hasStarted) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center p-6 text-center animate-fade-in bg-slate-50">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 text-center animate-fade-in bg-slate-50 overflow-y-auto custom-scrollbar">
         <div className="absolute top-0 right-0 w-96 h-96 bg-brand-primary/10 rounded-full blur-[120px]" />
-        <div className="max-w-2xl w-full relative z-10 bg-white p-10 md:p-12 rounded-3xl border border-slate-200 flex flex-col items-center shadow-xl">
+        <div className="max-w-2xl w-full relative z-10 bg-white p-8 md:p-12 rounded-3xl border border-slate-200 flex flex-col items-center shadow-xl my-auto">
            
            {quiz.game_mode === 'mastery' && (
              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm font-bold border border-slate-200 mb-6">
@@ -267,7 +267,7 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
            <h1 className="text-3xl md:text-5xl font-heading font-black text-slate-900 mb-4 leading-tight">{quiz.title}</h1>
            <p className="text-slate-600 mb-8 max-w-lg font-medium">{quiz.description}</p>
            
-           <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 mb-10 text-sm font-bold text-slate-700">
+           <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6 mb-10 text-sm font-bold text-slate-700">
              <div className="flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-full border border-slate-200 shadow-sm">
                 <FileQuestion className="w-5 h-5 text-brand-primary" /> {cards.length} <Translate fil="Aytem" en="Items" />
              </div>
@@ -308,8 +308,8 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
     const isPassing = pct >= 60
 
     return (
-      <div className="absolute inset-0 flex items-center justify-center p-6 text-center animate-fade-in bg-slate-50 overflow-y-auto">
-         <div className="max-w-xl w-full relative z-10 bg-white p-8 md:p-10 rounded-3xl border border-slate-200 flex flex-col items-center my-8 shadow-xl">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 text-center animate-fade-in bg-slate-50 overflow-y-auto custom-scrollbar">
+         <div className="max-w-xl w-full relative z-10 bg-white p-8 md:p-10 rounded-3xl border border-slate-200 flex flex-col items-center my-auto shadow-xl">
             
             <div className="w-16 h-16 rounded-2xl bg-brand-light flex items-center justify-center mb-4 shadow-sm">
               <Sparkles className="w-8 h-8 text-brand-primary" />
@@ -408,53 +408,53 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
   const currentMultiplier = quiz.game_mode === 'survival' && quiz.streak_multiplier ? Math.min(1 + Math.floor(currentStreak / 3) * 0.5, 3) : 1
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col relative overflow-hidden">
+    <div className="fixed inset-0 z-[60] bg-slate-50 flex flex-col overflow-hidden h-[100dvh] max-h-[100dvh] w-screen max-w-screen select-none">
       
-      <div className={`absolute inset-0 transition-colors duration-500 ${isEvaluating ? (isCorrect ? 'bg-emerald-50/50' : 'bg-rose-50/50') : 'bg-transparent'}`} />
+      <div className={`absolute inset-0 transition-colors duration-500 pointer-events-none ${isEvaluating ? (isCorrect ? 'bg-emerald-50/50' : 'bg-rose-50/50') : 'bg-transparent'}`} />
 
-      {/* Top Header */}
-      <header className="h-20 w-full px-6 flex items-center justify-between relative z-10 bg-white shadow-sm border-b border-slate-200">
-         <div className="flex items-center gap-4 text-slate-700">
+      {/* Top Header - Fixed & Pinned */}
+      <header className="h-16 md:h-20 w-full px-4 md:px-8 flex items-center justify-between shrink-0 bg-white shadow-sm border-b border-slate-200 z-20">
+         <div className="flex items-center gap-3 md:gap-4 text-slate-700">
            <Link href={quiz.is_practice ? '/student/practice' : `/student/classrooms/${quiz.classroom_id}`} className="hover:text-brand-primary transition-colors p-2 rounded-xl hover:bg-slate-100">
              <ArrowLeft className="w-5 h-5" />
            </Link>
            <div>
-             <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block">{quiz.title}</span>
-             <span className="font-heading font-black text-slate-900">Aytem {currentIdx + 1} / {cards.length}</span>
+             <span className="text-[11px] md:text-xs text-slate-500 font-bold uppercase tracking-wider block truncate max-w-[150px] md:max-w-none">{quiz.title}</span>
+             <span className="font-heading font-black text-slate-900 text-sm md:text-base">Aytem {currentIdx + 1} / {cards.length}</span>
            </div>
          </div>
 
          {/* V2 Survival Mode HUD */}
          {quiz.game_mode === 'survival' && (
-           <div className="flex items-center gap-6">
+           <div className="flex items-center gap-3 md:gap-6">
              {quiz.streak_multiplier && currentStreak > 0 && (
-               <div className="flex items-center gap-2 text-orange-600 font-bold bg-orange-50 px-3 py-1 rounded-full animate-fade-in border border-orange-200 shadow-sm">
+               <div className="flex items-center gap-1.5 text-orange-600 font-bold bg-orange-50 px-2.5 py-1 rounded-full animate-fade-in border border-orange-200 shadow-sm text-xs md:text-sm">
                  <Flame className="w-4 h-4" /> 
                  {currentMultiplier}x 
-                 <span className="text-xs opacity-75 font-medium ml-1">({currentStreak} streak)</span>
+                 <span className="text-[10px] opacity-75 font-medium ml-0.5 hidden sm:inline">({currentStreak} streak)</span>
                </div>
              )}
-             <div className="flex items-center gap-1.5">
+             <div className="flex items-center gap-1">
                {[...Array(quiz.survival_strikes || 3)].map((_, i) => (
-                 <HeartPulse key={i} className={`w-5 h-5 ${i < ((quiz.survival_strikes || 3) - strikes) ? 'text-rose-500 fill-rose-500' : 'text-slate-300'}`} />
+                 <HeartPulse key={i} className={`w-4 h-4 md:w-5 md:h-5 ${i < ((quiz.survival_strikes || 3) - strikes) ? 'text-rose-500 fill-rose-500' : 'text-slate-300'}`} />
                ))}
              </div>
            </div>
          )}
          
-         <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-2xl border border-slate-200 shadow-sm">
-           <Clock className={`w-5 h-5 ${timeLeft <= 5 ? 'text-rose-500 animate-pulse' : 'text-slate-600'}`} />
-           <span className={`font-mono text-xl font-black ${timeLeft <= 5 ? 'text-rose-600 font-black' : 'text-slate-900'}`}>{timeLeft}s</span>
+         <div className="flex items-center gap-2 md:gap-3 bg-slate-100 px-3 md:px-4 py-1.5 md:py-2 rounded-2xl border border-slate-200 shadow-sm">
+           <Clock className={`w-4 h-4 md:w-5 md:h-5 ${timeLeft <= 5 ? 'text-rose-500 animate-pulse' : 'text-slate-600'}`} />
+           <span className={`font-mono text-base md:text-xl font-black ${timeLeft <= 5 ? 'text-rose-600 font-black' : 'text-slate-900'}`}>{timeLeft}s</span>
          </div>
       </header>
 
-      {/* Progress Bar */}
-      <div className="w-full h-1.5 bg-slate-200 relative z-10">
+      {/* Progress Bar - Fixed & Pinned */}
+      <div className="w-full h-1.5 bg-slate-200 shrink-0 z-20">
         <div className="h-full bg-brand-primary transition-all duration-300 shadow-[0_0_10px_rgba(40,88,64,0.5)]" style={{ width: `${progressPct}%` }} />
       </div>
 
       {/* Main Play Area */}
-      <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-6 relative z-10">
+      <main className="flex-1 w-full overflow-y-auto flex flex-col items-center justify-center p-4 md:p-6 relative z-10 custom-scrollbar">
          
          {eliminated ? (
            <div className="text-center animate-fade-in bg-white p-12 rounded-3xl border border-slate-200 shadow-xl max-w-lg w-full">

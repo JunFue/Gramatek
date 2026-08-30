@@ -32,10 +32,12 @@ export default async function PracticeGamePlayer({
   }
 
   return (
-    <QuizPlayer 
-       quiz={quiz}
-       cards={staticQuiz.cards}
-       pastAttemptsCount={0}
-    />
+    <div className="fixed inset-0 z-[60] bg-slate-50">
+      <QuizPlayer 
+         quiz={quiz}
+         cards={staticQuiz.cards}
+         pastAttemptsCount={0}
+      />
+    </div>
   )
 }

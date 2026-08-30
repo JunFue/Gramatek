@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { saveQuiz } from '@/app/educator/quizzes/actions'
-import { ArrowLeft, Save, FileQuestion, Plus, Trash2, GripVertical, CheckCircle2, Clock, Swords, CalendarClock, Trophy, Zap, Shuffle, Shield, Target } from 'lucide-react'
+import { ArrowLeft, Save, FileQuestion, Plus, Trash2, GripVertical, CheckCircle2, Clock, Swords, CalendarClock, Trophy, Zap, Shuffle, Shield, Target, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { Translate } from '@/components/Translate'
 
@@ -106,16 +106,27 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
           <button 
             disabled={isSubmitting}
             onClick={() => handleSave(false)}
-            className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-full text-sm font-bold transition-colors"
+            className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-full text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
           >
+            {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             <Translate fil="I-save bilang Draft" en="Save Draft" />
           </button>
           <button 
             disabled={isSubmitting}
             onClick={() => handleSave(true)}
-            className="px-6 py-2 bg-brand-primary hover:bg-slate-600 text-white rounded-full text-sm font-bold shadow-md transition-all flex items-center gap-2"
+            className="px-6 py-2 bg-brand-primary hover:bg-slate-600 text-white rounded-full text-sm font-bold shadow-md transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
           >
-            {isSubmitting ? <Translate fil="Sini-save..." en="Saving..." /> : <><Save className="w-4 h-4" /> <Translate fil="I-publish para Mai-play" en="Publish Playable" /></>}
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <Translate fil="Sini-save..." en="Saving..." />
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" /> 
+                <Translate fil="I-publish para Mai-play" en="Publish Playable" />
+              </>
+            )}
           </button>
         </div>
       </div>

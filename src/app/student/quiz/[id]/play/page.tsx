@@ -107,7 +107,7 @@ export default async function PlayQuizPage({ params }: { params: Promise<{ id: s
   }
 
   return (
-    <div className="absolute inset-0 bg-background z-50">
+    <div className="fixed inset-0 bg-slate-50 z-[60]">
       <QuizPlayer quiz={quiz} cards={playableCards} pastAttemptsCount={pastAttemptsCount} />
     </div>
   )

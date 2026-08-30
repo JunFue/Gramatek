@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import { ALAM_MO_BA_FACTS } from '@/lib/data/filipino-trivia'
@@ -63,7 +63,7 @@ export function TriviaSlideshow() {
 
   const currentFact = ALAM_MO_BA_FACTS[currentIndex] || ""
   const parts = currentFact.split(' – ')
-  const factTitle = parts[0] || ""
+  const factTitle = (parts[0] || "").replace(/^\d+\.\s*/, '')
   const factBody = parts.slice(1).join(' – ')
 
   return (
@@ -98,9 +98,6 @@ export function TriviaSlideshow() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 shadow-xs">
-            {currentIndex + 1} / {ALAM_MO_BA_FACTS.length}
-          </span>
           <button
             onClick={() => setIsPlaying(!isPlaying)}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
