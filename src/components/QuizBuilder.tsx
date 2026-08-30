@@ -19,8 +19,8 @@ interface CardData {
 }
 
 const GAME_MODES: { id: GameMode; label: { fil: string; en: string }; description: { fil: string; en: string }; icon: any; color: string; bg: string }[] = [
-  { id: 'mastery', label: { fil: 'Mode ng Masteriya', en: 'Mastery Mode' }, description: { fil: 'Bukas na pagsasanay na may limitadong retake. Ang pinakamataas o average na marka ang nakatala.', en: 'Open practice with limited retakes. Best or average score recorded.' }, icon: Trophy, color: 'text-amber-500', bg: 'bg-amber-50 border-amber-200 hover:border-amber-400' },
-  { id: 'scheduled', label: { fil: 'Nakatakdang Misyon', en: 'Scheduled Mission' }, description: { fil: 'Magtakda ng oras. Makakatanggap ng abiso ang mga mag-aaral.', en: 'Set a time window. Students receive notifications and take it individually.' }, icon: CalendarClock, color: 'text-blue-500', bg: 'bg-blue-50 border-blue-200 hover:border-blue-400' },
+  { id: 'mastery', label: { fil: 'Mode ng Masteriya', en: 'Mastery Mode' }, description: { fil: 'Bukas na pagsasanay na may limitadong retake. Ang pinakamataas o average na marka ang nakatala.', en: 'Open practice with limited retakes. Best or average score recorded.' }, icon: Trophy, color: 'text-slate-500', bg: 'bg-slate-50 border-slate-200 hover:border-slate-400' },
+  { id: 'scheduled', label: { fil: 'Nakatakdang Misyon', en: 'Scheduled Mission' }, description: { fil: 'Magtakda ng oras. Makakatanggap ng abiso ang mga mag-aaral.', en: 'Set a time window. Students receive notifications and take it individually.' }, icon: CalendarClock, color: 'text-slate-500', bg: 'bg-slate-50 border-slate-200 hover:border-slate-400' },
   { id: 'survival', label: { fil: 'Mode ng Kaligtasan', en: 'Survival / Streak' }, description: { fil: 'Ginagantimpalaan ng streak multiplier ang pagiging pare-pareho. Matanggal kapag maraming mali.', en: 'Streak multipliers reward consistency. Miss too many and you\'re eliminated.' }, icon: Zap, color: 'text-rose-500', bg: 'bg-rose-50 border-rose-200 hover:border-rose-400' },
 ]
 
@@ -113,7 +113,7 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
           <button 
             disabled={isSubmitting}
             onClick={() => handleSave(true)}
-            className="px-6 py-2 bg-brand-primary hover:bg-blue-600 text-white rounded-full text-sm font-bold shadow-md transition-all flex items-center gap-2"
+            className="px-6 py-2 bg-brand-primary hover:bg-slate-600 text-white rounded-full text-sm font-bold shadow-md transition-all flex items-center gap-2"
           >
             {isSubmitting ? <Translate fil="Sini-save..." en="Saving..." /> : <><Save className="w-4 h-4" /> <Translate fil="I-publish para Mai-play" en="Publish Playable" /></>}
           </button>
@@ -157,13 +157,13 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
 
       {/* ── Mode-Specific Settings ── */}
       {gameMode === 'mastery' && (
-        <div className="bg-amber-50 rounded-2xl p-6 mb-8 border border-amber-200 animate-slide-up shadow-sm">
-          <h3 className="text-lg font-heading font-bold text-amber-700 mb-4 flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-500" /> <Translate fil="Mga Setting ng Masteriya" en="Mastery Settings" />
+        <div className="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-200 animate-slide-up shadow-sm">
+          <h3 className="text-lg font-heading font-bold text-slate-700 mb-4 flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-slate-500" /> <Translate fil="Mga Setting ng Masteriya" en="Mastery Settings" />
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-amber-800"><Translate fil="Pinakamaraming Pagtatangka" en="Max Attempts" /></label>
+              <label className="text-sm font-bold text-slate-800"><Translate fil="Pinakamaraming Pagtatangka" en="Max Attempts" /></label>
               <div className="flex items-center gap-3">
                 <input
                   type="number"
@@ -172,23 +172,23 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
                   value={maxAttempts ?? ''}
                   onChange={(e) => setMaxAttempts(e.target.value ? Number(e.target.value) : null)}
                   placeholder="Unlimited"
-                  className="w-28 bg-white border border-amber-200 rounded-xl px-4 py-3 text-slate-900 font-bold text-center focus:outline-none focus:border-amber-500 transition-all shadow-sm"
+                  className="w-28 bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold text-center focus:outline-none focus:border-slate-500 transition-all shadow-sm"
                 />
-                <span className="text-amber-700/80 text-sm font-medium"><Translate fil="pag-uulit bawat mag-aaral (walang laman = walang limitasyon)" en="retries per student (empty = unlimited)" /></span>
+                <span className="text-slate-700/80 text-sm font-medium"><Translate fil="pag-uulit bawat mag-aaral (walang laman = walang limitasyon)" en="retries per student (empty = unlimited)" /></span>
               </div>
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-amber-800"><Translate fil="Paraan ng Pagmamarka" en="Scoring Method" /></label>
+              <label className="text-sm font-bold text-slate-800"><Translate fil="Paraan ng Pagmamarka" en="Scoring Method" /></label>
               <div className="flex gap-3">
                 <button
                   onClick={() => setScoringMethod('highest')}
-                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border ${scoringMethod === 'highest' ? 'bg-amber-500 text-white border-amber-600 shadow-sm' : 'bg-white border-amber-200 text-amber-700 hover:bg-amber-100 shadow-sm'}`}
+                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border ${scoringMethod === 'highest' ? 'bg-slate-500 text-white border-slate-600 shadow-sm' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-sm'}`}
                 >
                   🏆 <Translate fil="Pinakamataas na Iskor" en="Highest Score" />
                 </button>
                 <button
                   onClick={() => setScoringMethod('average')}
-                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border ${scoringMethod === 'average' ? 'bg-amber-500 text-white border-amber-600 shadow-sm' : 'bg-white border-amber-200 text-amber-700 hover:bg-amber-100 shadow-sm'}`}
+                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border ${scoringMethod === 'average' ? 'bg-slate-500 text-white border-slate-600 shadow-sm' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-sm'}`}
                 >
                   📊 <Translate fil="Karaniwang Iskor" en="Average Score" />
                 </button>
@@ -199,31 +199,31 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
       )}
 
       {gameMode === 'scheduled' && (
-        <div className="bg-blue-50 rounded-2xl p-6 mb-8 border border-blue-200 animate-slide-up shadow-sm">
-          <h3 className="text-lg font-heading font-bold text-blue-700 mb-4 flex items-center gap-2">
-            <CalendarClock className="w-5 h-5 text-blue-500" /> <Translate fil="Oras ng Iskedyul" en="Schedule Window" />
+        <div className="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-200 animate-slide-up shadow-sm">
+          <h3 className="text-lg font-heading font-bold text-slate-700 mb-4 flex items-center gap-2">
+            <CalendarClock className="w-5 h-5 text-slate-500" /> <Translate fil="Oras ng Iskedyul" en="Schedule Window" />
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-blue-800"><Translate fil="Magsisimula Sa" en="Opens At" /></label>
+              <label className="text-sm font-bold text-slate-800"><Translate fil="Magsisimula Sa" en="Opens At" /></label>
               <input
                 type="datetime-local"
                 value={scheduledStart}
                 onChange={(e) => setScheduledStart(e.target.value)}
-                className="bg-white border border-blue-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:border-blue-500 transition-all shadow-sm"
+                className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:border-slate-500 transition-all shadow-sm"
               />
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-blue-800"><Translate fil="Magsasara Sa" en="Closes At" /></label>
+              <label className="text-sm font-bold text-slate-800"><Translate fil="Magsasara Sa" en="Closes At" /></label>
               <input
                 type="datetime-local"
                 value={scheduledEnd}
                 onChange={(e) => setScheduledEnd(e.target.value)}
-                className="bg-white border border-blue-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:border-blue-500 transition-all shadow-sm"
+                className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:border-slate-500 transition-all shadow-sm"
               />
             </div>
           </div>
-          <p className="text-xs text-blue-700/80 font-medium mt-3"><Translate fil="Makakatanggap ng abiso ang mga enrolled kapag bukas na ang pagsusulit." en="Students enrolled in this classroom will receive a notification when the quiz becomes available." /></p>
+          <p className="text-xs text-slate-700/80 font-medium mt-3"><Translate fil="Makakatanggap ng abiso ang mga enrolled kapag bukas na ang pagsusulit." en="Students enrolled in this classroom will receive a notification when the quiz becomes available." /></p>
         </div>
       )}
 
@@ -385,7 +385,7 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
                     <div key={i} className="flex items-center gap-2">
                        <button 
                          onClick={() => updateCard(card.id, { correctAnswer: i })}
-                         className={`w-6 h-6 rounded-full flex items-center justify-center border transition-colors shrink-0 ${card.correctAnswer === i ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 hover:border-slate-400'}`}
+                         className={`w-6 h-6 rounded-full flex items-center justify-center border transition-colors shrink-0 ${card.correctAnswer === i ? 'bg-slate-500 border-slate-500 text-white' : 'border-slate-300 hover:border-slate-400'}`}
                        >
                          {card.correctAnswer === i && <CheckCircle2 className="w-4 h-4" />}
                        </button>
@@ -398,7 +398,7 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
                            newOpts[i] = e.target.value;
                            updateCard(card.id, { options: newOpts })
                          }}
-                         className={`flex-1 bg-white border rounded-lg px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-brand-primary ${card.correctAnswer === i ? 'border-emerald-300 bg-emerald-50 shadow-sm' : 'border-slate-200'}`}
+                         className={`flex-1 bg-white border rounded-lg px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-brand-primary ${card.correctAnswer === i ? 'border-slate-300 bg-slate-50 shadow-sm' : 'border-slate-200'}`}
                        />
                     </div>
                   ))}
@@ -414,7 +414,7 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
                      placeholder="The exact word/phrase"
                      value={card.correctAnswer}
                      onChange={(e) => updateCard(card.id, { correctAnswer: e.target.value })}
-                     className="w-full max-w-sm bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 text-emerald-700 font-bold focus:outline-none focus:border-brand-primary transition-all shadow-sm"
+                     className="w-full max-w-sm bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-slate-700 font-bold focus:outline-none focus:border-brand-primary transition-all shadow-sm"
                   />
                   <p className="text-xs text-slate-500 font-medium mt-2"><Translate fil='Tiyaking ilagay ang nawawalang bahagi gamit ang "___" sa text ng tanong.' en='Make sure to indicate the missing part with "___" in your question text.' /></p>
                 </div>
@@ -427,10 +427,10 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
         {/* Add Card Menu */}
         <div className="bg-slate-50 rounded-xl p-4 border border-dashed border-slate-300 flex flex-col md:flex-row items-center justify-center gap-4 shadow-sm">
            <span className="text-sm font-bold text-slate-500"><Translate fil="Magdagdag ng card:" en="Add new card:" /></span>
-           <button onClick={() => addCard('multiple_choice')} className="px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm">
+           <button onClick={() => addCard('multiple_choice')} className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm">
              <Plus className="w-4 h-4" /> <Translate fil="Pagpipilian" en="Multiple Choice" />
            </button>
-           <button onClick={() => addCard('fill_blank')} className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm">
+           <button onClick={() => addCard('fill_blank')} className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm">
              <Plus className="w-4 h-4" /> <Translate fil="Punan ang Patlang" en="Fill in the Blank" />
            </button>
            <button onClick={() => alert("Enumeration coming soon")} className="px-4 py-2 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm">

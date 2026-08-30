@@ -55,7 +55,7 @@ export function JoinClassroomForm() {
  <button
  type="submit"
  disabled={isSubmitting}
- className="w-full py-3.5 bg-gradient-to-r from-brand-primary via-brand-secondary to-amber-400 hover:opacity-90 text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-lg disabled:opacity-50"
+ className="w-full py-3.5 btn-primary rounded-2xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
  >
  {isSubmitting ? (
  <Loader2 className="w-5 h-5 animate-spin" />

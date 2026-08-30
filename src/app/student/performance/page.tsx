@@ -70,8 +70,8 @@ export default async function StudentPerformancePage() {
  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
  <div className="glass-strong rounded-3xl p-8 border border-white/80 relative overflow-hidden shadow-xl hover:scale-[1.02] transition-transform">
  <div className="flex items-center gap-4 mb-4 relative z-10">
- <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
- <Target className="w-6 h-6 text-emerald-600 " />
+ <div className="w-12 h-12 rounded-2xl bg-slate-500/20 flex items-center justify-center">
+ <Target className="w-6 h-6 text-slate-600 " />
  </div>
  <h3 className="text-slate-600 font-bold text-lg"><Translate fil="Grap ng Iskor" en="Avg Score" /></h3>
  </div>
@@ -90,8 +90,8 @@ export default async function StudentPerformancePage() {
 
  <div className="glass-strong rounded-3xl p-8 border border-white/80 relative overflow-hidden shadow-xl hover:scale-[1.02] transition-transform">
  <div className="flex items-center gap-4 mb-4 relative z-10">
- <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center">
- <Compass className="w-6 h-6 text-blue-600 " />
+ <div className="w-12 h-12 rounded-2xl bg-slate-500/20 flex items-center justify-center">
+ <Compass className="w-6 h-6 text-slate-600 " />
  </div>
  <h3 className="text-slate-600 font-bold text-lg"><Translate fil="Kabuuang Pagsusulit" en="Total Quizzes" /></h3>
  </div>
@@ -157,7 +157,7 @@ export default async function StudentPerformancePage() {
  <h4 className="text-slate-800 text-sm font-bold line-clamp-1">{attempt.quizzes?.title || 'Hindi Natukoy'}</h4>
  <p className="text-xs text-slate-500 font-semibold mt-1">{new Date(attempt.completed_at).toLocaleDateString()}</p>
  </div>
- <div className={`font-black text-lg ${isPassing ? 'text-emerald-600 ' : 'text-rose-600 '}`}>
+ <div className={`font-black text-lg ${isPassing ? 'text-slate-600 ' : 'text-rose-600 '}`}>
  {Math.round(pct)}%
  </div>
  </div>

@@ -155,12 +155,12 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
         <div className="max-w-2xl w-full relative z-10 bg-white p-12 rounded-3xl border border-slate-200 flex flex-col items-center shadow-xl">
            
            {quiz.game_mode === 'mastery' && (
-             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-sm font-bold border border-amber-200 mb-6">
+             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm font-bold border border-slate-200 mb-6">
                <Trophy className="w-4 h-4" /> <Translate fil="Mode ng Masteriya" en="Mastery Mode" />
              </span>
            )}
            {quiz.game_mode === 'scheduled' && (
-             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-bold border border-blue-200 mb-6">
+             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm font-bold border border-slate-200 mb-6">
                <CalendarClock className="w-4 h-4" /> <Translate fil="Nakatakdang Misyon" en="Scheduled Mission" />
              </span>
            )}
@@ -188,10 +188,10 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
            </div>
 
            {quiz.game_mode === 'mastery' && quiz.max_attempts && (
-             <p className="text-amber-600 font-bold mb-8"><Translate fil="Pagtatangka" en="Attempt" /> {pastAttemptsCount + 1} / {quiz.max_attempts}</p>
+             <p className="text-slate-600 font-bold mb-8"><Translate fil="Pagtatangka" en="Attempt" /> {pastAttemptsCount + 1} / {quiz.max_attempts}</p>
            )}
            
-           <button onClick={startQuiz} className="group relative px-10 py-5 bg-brand-primary hover:bg-blue-600 rounded-full text-white font-black text-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-1 hover:scale-105 active:scale-95 duration-200">
+           <button onClick={startQuiz} className="group relative px-10 py-5 bg-brand-primary hover:bg-slate-600 rounded-full text-white font-black text-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-1 hover:scale-105 active:scale-95 duration-200">
              <span className="flex items-center gap-3">
                <Play className="w-6 h-6 fill-white" />
                <Translate fil="SIMULAN ANG PAGSUSULIT" en="START QUIZ" />
@@ -259,7 +259,7 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
                      <Translate fil="Tingnan ang Kasaysayan" en="View History" />
                    </Link>
                  )}
-                 <Link href={`/student/classrooms/${quiz.classroom_id}`} className="flex-1 py-4 bg-brand-primary hover:bg-blue-600 text-white font-bold rounded-2xl transition-colors shadow-md text-center">
+                 <Link href={`/student/classrooms/${quiz.classroom_id}`} className="flex-1 py-4 bg-brand-primary hover:bg-slate-600 text-white font-bold rounded-2xl transition-colors shadow-md text-center">
                    <Translate fil="Bumalik sa Silid-aralan" en="Back to Classroom" />
                  </Link>
                </div>
@@ -278,7 +278,7 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col relative overflow-hidden">
       
-      <div className={`absolute inset-0 transition-colors duration-500 ${isEvaluating ? (isCorrect ? 'bg-emerald-50' : 'bg-red-50') : 'bg-transparent'}`} />
+      <div className={`absolute inset-0 transition-colors duration-500 ${isEvaluating ? (isCorrect ? 'bg-slate-50' : 'bg-red-50') : 'bg-transparent'}`} />
 
       {/* Top Header */}
       <header className="h-20 w-full px-6 flex items-center justify-between relative z-10 bg-white shadow-sm border-b border-slate-200">
@@ -326,7 +326,7 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
              <XCircle className="w-24 h-24 text-rose-500 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(244,63,94,0.3)]" />
              <h2 className="text-4xl font-heading font-black text-slate-900 mb-2"><Translate fil="Tanggal!" en="Eliminated!" /></h2>
              <p className="text-slate-600 font-medium mb-8"><Translate fil="Wala ka nang buhay." en="You ran out of lives." /></p>
-             <button onClick={finishQuiz} className="px-8 py-3 bg-brand-primary hover:bg-blue-600 shadow-md text-white rounded-full font-bold transition-all">
+             <button onClick={finishQuiz} className="px-8 py-3 bg-brand-primary hover:bg-slate-600 shadow-md text-white rounded-full font-bold transition-all">
                <Translate fil="Magpatuloy sa Resulta" en="Continue to Results" />
              </button>
            </div>
@@ -341,10 +341,10 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  {card.options.map((opt: string, idx: number) => {
                    let btnClass = "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm"
-                   if (selectedAnswer === idx) btnClass = "bg-blue-50 border-blue-200 text-brand-primary shadow-md"
+                   if (selectedAnswer === idx) btnClass = "bg-slate-50 border-slate-200 text-brand-primary shadow-md"
                    
                    if (isEvaluating) {
-                     if (card.correct_answer === idx) btnClass = "bg-emerald-500 text-white border-emerald-500 scale-105 shadow-xl shadow-emerald-500/20 font-bold"
+                     if (card.correct_answer === idx) btnClass = "bg-slate-500 text-white border-slate-500 scale-105 shadow-xl shadow-slate-500/20 font-bold"
                      else if (selectedAnswer === idx) btnClass = "bg-red-50 text-red-600 border-red-200 shadow-sm font-bold"
                      else btnClass = "bg-slate-50 border-slate-200 text-slate-400 opacity-50 shadow-none"
                    }
@@ -374,7 +374,7 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
                    className={`w-full bg-white border rounded-2xl px-6 py-5 text-xl font-bold text-center shadow-sm focus:outline-none transition-all ${
                      isEvaluating 
                        ? isCorrect 
-                         ? 'border-emerald-500 text-emerald-700 bg-emerald-50' 
+                         ? 'border-slate-500 text-slate-700 bg-slate-50' 
                          : 'border-red-500 text-red-700 bg-red-50'
                        : 'border-slate-300 text-slate-900 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary'
                    }`}
@@ -384,7 +384,7 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
                  />
                  {isEvaluating && !isCorrect && (
                    <div className="mt-4 flex flex-col items-center">
-                      <p className="text-emerald-700 font-bold shadow-sm inline-block px-4 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+                      <p className="text-slate-700 font-bold shadow-sm inline-block px-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
                         <Translate fil="Tamang sagot" en="Correct answer" />: {card.correct_answer}
                       </p>
                    </div>
@@ -395,7 +395,7 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
              {isEvaluating && (
                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center animate-fade-in pointer-events-none">
                  {isCorrect ? (
-                   <div className="bg-white/80 backdrop-blur text-emerald-500 p-8 rounded-full border border-emerald-200 shadow-[0_0_30px_rgba(16,185,129,0.3)] animate-pulse">
+                   <div className="bg-white/80 backdrop-blur text-slate-500 p-8 rounded-full border border-slate-200 shadow-[0_0_30px_rgba(16,185,129,0.3)] animate-pulse">
                       <CheckCircle2 className="w-24 h-24" />
                    </div>
                  ) : (
@@ -415,7 +415,7 @@ export function QuizPlayer({ quiz, cards, pastAttemptsCount = 0 }: { quiz: any, 
                (card?.question_type === 'fill_blank' && textAnswer.trim() !== '')) && (
                <button 
                  onClick={submitAnswer}
-                 className="pointer-events-auto px-8 py-4 bg-brand-primary hover:bg-blue-600 text-white rounded-full font-black tracking-wide shadow-[0_4px_20px_rgba(37,99,235,0.4)] hover:shadow-[0_6px_25px_rgba(37,99,235,0.5)] hover:-translate-y-1 transition-all flex items-center gap-2 animate-slide-up"
+                 className="pointer-events-auto px-8 py-4 bg-brand-primary hover:bg-slate-600 text-white rounded-full font-black tracking-wide shadow-[0_4px_20px_rgba(37,99,235,0.4)] hover:shadow-[0_6px_25px_rgba(37,99,235,0.5)] hover:-translate-y-1 transition-all flex items-center gap-2 animate-slide-up"
                >
                  <Translate fil="IPASAGOT" en="SUBMIT" /> <ChevronRight className="w-5 h-5" />
                </button>

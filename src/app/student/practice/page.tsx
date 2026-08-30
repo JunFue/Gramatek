@@ -27,7 +27,7 @@ export default function PracticeHub() {
  <div className="p-8 max-w-6xl mx-auto space-y-12 pb-24 text-slate-900 transition-colors duration-300">
  
  <div className="text-center relative z-10 space-y-4">
- <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 font-extrabold text-xs tracking-wider uppercase border border-amber-200 shadow-sm animate-bounce">
+ <span className="inline-block px-4 py-1.5 rounded-full bg-slate-100 text-slate-700 font-extrabold text-xs tracking-wider uppercase border border-slate-200 shadow-sm animate-bounce">
  🎯 <Translate fil="Pagsasanay at Laro" en="Practice and Play" />
  </span>
  <h1 className="text-4xl md:text-5xl font-heading font-black tracking-tight text-slate-900">
@@ -56,7 +56,7 @@ export default function PracticeHub() {
  <div className="bg-white p-2 rounded-2xl flex items-center shadow-md border border-slate-200 gap-2">
  <button 
  onClick={() => setSelectedMode('mastery')}
- className={`px-8 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${selectedMode === 'mastery' ? 'bg-amber-500 text-white shadow-md scale-105' : 'text-slate-500 hover:bg-slate-50 '}`}
+ className={`px-8 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${selectedMode === 'mastery' ? 'bg-slate-500 text-white shadow-md scale-105' : 'text-slate-500 hover:bg-slate-50 '}`}
  >
  <Trophy className="w-5 h-5" /> <Translate fil="Mode ng Masteriya" en="Mastery Mode" />
  </button>
@@ -79,7 +79,7 @@ export default function PracticeHub() {
  <div key={quiz.id} className={`rounded-3xl p-8 border-2 flex flex-col relative overflow-hidden transition-all duration-300 ${isUnlocked ? 'bg-white shadow-lg hover:-translate-y-2 hover:scale-[1.02] hover:shadow-xl border-slate-200 ' : 'bg-slate-50 border-slate-200 grayscale opacity-70'}`}>
  
  {isCompleted && (
- <div className="absolute top-4 right-4 bg-emerald-500 text-white p-1 rounded-full shadow-md z-20 animate-pulse">
+ <div className="absolute top-4 right-4 bg-slate-500 text-white p-1 rounded-full shadow-md z-20 animate-pulse">
  <CheckCircle2 className="w-6 h-6" />
  </div>
  )}
@@ -92,7 +92,7 @@ export default function PracticeHub() {
  <p className="text-slate-600 font-semibold mb-8 flex-1">{quiz.description}</p>
  
  {isUnlocked ? (
- <Link href={`/student/practice/${quiz.id}?mode=${selectedMode}`} className="w-full py-4 rounded-2xl bg-brand-primary hover:bg-blue-600 text-white font-extrabold text-lg transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 group">
+ <Link href={`/student/practice/${quiz.id}?mode=${selectedMode}`} className="w-full py-4 rounded-2xl bg-brand-primary hover:bg-slate-600 text-white font-extrabold text-lg transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 group">
  <Play className="w-5 h-5 fill-white group-hover:scale-110 transition-transform" /> <Translate fil="Maglaro Na" en="Play Now" /> ➔
  </Link>
  ) : (

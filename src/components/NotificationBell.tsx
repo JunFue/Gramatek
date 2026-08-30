@@ -65,7 +65,7 @@ export function NotificationBell() {
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-accent rounded-full shadow-[0_0_8px_rgba(187,200,99,0.5)]" />
         )}
       </button>
 
@@ -74,7 +74,7 @@ export function NotificationBell() {
            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50">
              <h3 className="font-bold text-slate-900 text-sm"><Translate fil="Mga Abiso" en="Notifications" /></h3>
              {unreadCount > 0 && (
-               <span className="text-xs font-bold bg-rose-100 text-rose-700 px-2.5 py-0.5 rounded-full"><Translate fil={`${unreadCount} bago`} en={`${unreadCount} new`} /></span>
+               <span className="text-xs font-bold bg-brand-accent/20 text-brand-primary px-2.5 py-0.5 rounded-full"><Translate fil={`${unreadCount} bago`} en={`${unreadCount} new`} /></span>
              )}
            </div>
            
@@ -88,7 +88,7 @@ export function NotificationBell() {
                  <button 
                    key={n.id}
                    onClick={() => markAsRead(n.id, n.link)}
-                   className={`w-full text-left p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors flex gap-3 ${!n.is_read ? 'bg-blue-50/50' : ''}`}
+                   className={`w-full text-left p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors flex gap-3 ${!n.is_read ? 'bg-slate-50/50' : ''}`}
                  >
                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.is_read ? 'bg-brand-primary' : 'bg-transparent'}`} />
                    <div>

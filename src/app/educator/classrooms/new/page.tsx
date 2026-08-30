@@ -15,7 +15,7 @@ export default function NewClassroomPage() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/10 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
         
         <div className="flex items-center gap-4 mb-8 relative z-10">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
+          <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
             <Library className="w-6 h-6 text-brand-primary" />
           </div>
           <div>
@@ -69,7 +69,7 @@ export default function NewClassroomPage() {
              <Link href="/educator/classrooms" className="px-6 py-2.5 rounded-full font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors">
                <Translate fil="Kanselahin" en="Cancel" />
              </Link>
-             <button type="submit" className="px-6 py-2.5 bg-brand-primary hover:bg-blue-600 text-white font-bold rounded-full shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0">
+             <button type="submit" className="px-6 py-2.5 bg-brand-primary hover:bg-slate-600 text-white font-bold rounded-full shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0">
                <Translate fil="Bumuo ng Silid-aralan" en="Create Classroom" />
              </button>
           </div>

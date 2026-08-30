@@ -8,7 +8,7 @@ export default function AuthCodeErrorPage() {
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-brand-primary/5 rounded-full blur-[120px] pointer-events-none" />
       
       <div className="max-w-2xl relative z-10 bg-white p-8 md:p-12 rounded-3xl border border-slate-200 shadow-xl flex flex-col items-center">
-        <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mb-6 text-red-500 border border-red-100">
+        <div className="w-16 h-16 rounded-2xl bg-brand-light/40 flex items-center justify-center mb-6 text-brand-primary border border-brand-accent/20">
           <AlertTriangle className="w-10 h-10" />
         </div>
 
@@ -40,7 +40,7 @@ export default function AuthCodeErrorPage() {
           <Link href="/" className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-200">
             <Home className="w-5 h-5" /> <Translate fil="Bumalik sa Pambungad" en="Back to Home" />
           </Link>
-          <Link href="/" className="flex-1 py-4 bg-brand-primary hover:bg-blue-600 text-white font-bold rounded-2xl transition-all shadow-md flex items-center justify-center gap-2">
+          <Link href="/" className="flex-1 py-4 btn-primary rounded-2xl flex items-center justify-center gap-2">
             <RefreshCw className="w-5 h-5" /> <Translate fil="Subukang Muli" en="Retry Login" />
           </Link>
         </div>

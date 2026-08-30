@@ -20,7 +20,7 @@ export default async function ClassroomsPage() {
           <h1 className="text-3xl font-heading font-extrabold text-slate-900 mb-2"><Translate fil="Aking mga Silid-aralan" en="My Classrooms" /></h1>
           <p className="text-slate-600">Pamahalaan ang lahat ng iyong aktibo at naka-archive na silid-aralan.</p>
         </div>
-        <Link href="/educator/classrooms/new" className="px-6 py-3 bg-brand-primary hover:bg-blue-600 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-md shrink-0 self-start md:self-auto">
+        <Link href="/educator/classrooms/new" className="px-6 py-3 bg-brand-primary hover:bg-slate-600 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-md shrink-0 self-start md:self-auto">
           <Plus className="w-5 h-5" />
           <Translate fil="Gumawa ng Silid-aralan" en="Create Classroom" />
         </Link>
@@ -32,7 +32,7 @@ export default async function ClassroomsPage() {
             <Link key={classroom.id} href={`/educator/classrooms/${classroom.id}`} className="bg-white border border-slate-200 hover:border-brand-primary/50 rounded-2xl p-6 flex flex-col relative overflow-hidden group shadow-md transition-all">
               <div className="flex justify-between items-start mb-4 relative z-10">
                 <h3 className="text-2xl font-heading font-bold text-slate-900 truncate pr-4">{classroom.name}</h3>
-                <span className={`px-2.5 py-1 rounded-md text-xs font-bold shrink-0 ${classroom.is_active ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'}`}>
+                <span className={`px-2.5 py-1 rounded-md text-xs font-bold shrink-0 ${classroom.is_active ? 'bg-slate-100 text-slate-700 border border-slate-200' : 'bg-slate-100 text-slate-600'}`}>
                   {classroom.is_active ? 'Aktibo' : 'Naka-archive'}
                 </span>
               </div>

@@ -4,88 +4,106 @@
   --font-sans: var(--font-nunito);
   --font-heading: var(--font-fredoka);
 
-  --color-brand-primary: #255C8E; /* Logo Dark Blue */
-  --color-brand-secondary: #009BD8; /* Logo Light Blue */
-  --color-brand-accent: #F5B041; /* Logo Yellow */
+  /* ─── Brand Palette ─── */
+  --color-brand-primary: #31694E;   /* Dark Forest Green  */
+  --color-brand-secondary: #658C58; /* Nature Green       */
+  --color-brand-accent: #BBC863;    /* Lime Green         */
+  --color-brand-light: #F0E491;     /* Soft Yellow        */
 
+  /* ─── Surfaces ─── */
   --color-surface: #ffffff;
-  --color-surface-hover: #f1f5f9;
-  --color-background: #F0F8FF; /* Alice Blue, very soft */
+  --color-surface-hover: #f5f8f2;
+  --color-background: #FAFDF6;
 }
 
-/* Base styles without dark mode support */
+/* ─── Base Styles ─── */
 @layer base {
   :root {
-    --background: #F4F9FF; /* Soft sky blue light background */
-    --foreground: #0f172a; /* Slate 900 */
-    --card-bg: rgba(255, 255, 255, 0.9);
-    --card-border: rgba(255, 255, 255, 0.8);
-    --sidebar-bg: #ffffff;
-    --sidebar-border: #e2e8f0;
-    --text-muted: #475569;
+    color-scheme: light;
+    --background: #FAFDF6;
+    --foreground: #1a2e1a;
+    --card-bg: #ffffff;
+    --card-border: #d4ddd0;
+    --sidebar-bg: #31694E;
+    --sidebar-border: #285840;
+    --text-muted: #5a6b5a;
   }
 
   body {
     background-color: var(--background);
     color: var(--foreground);
-    background-image: radial-gradient(circle at 10% 20%, rgba(0, 155, 216, 0.15) 0%, transparent 40%),
-                      radial-gradient(circle at 90% 80%, rgba(245, 176, 65, 0.15) 0%, transparent 40%);
-    background-attachment: fixed;
-    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
-/* Custom utilities */
+/* ─── Reusable Component Utilities ─── */
+/* Change ONLY this section to re-skin the entire app. */
 @layer utilities {
-  .glass {
-    @apply bg-white/70 backdrop-blur-md border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.05)];
+
+  /* Buttons */
+  .btn-primary {
+    @apply bg-brand-primary hover:bg-brand-secondary text-white font-bold rounded-xl px-6 py-3 transition-colors shadow-sm;
   }
-  
-  .glass-strong {
-    @apply bg-white/90 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgba(0,0,0,0.08)];
+  .btn-secondary {
+    @apply bg-brand-accent hover:bg-brand-light text-brand-primary font-bold rounded-xl px-6 py-3 transition-colors shadow-sm;
+  }
+  .btn-outline {
+    @apply border-2 border-brand-primary text-brand-primary hover:bg-brand-primary hover:text-white font-bold rounded-xl px-6 py-3 transition-colors;
   }
 
-  .glass-subtle {
-    @apply bg-white/40 backdrop-blur-sm border border-white/30;
+  /* Cards */
+  .card {
+    @apply bg-white border border-[#d4ddd0] rounded-2xl shadow-sm;
   }
-  
-  /* Shared card hover effect with fun pop transform for kids */
   .card-hover {
-    @apply transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(0,155,216,0.15)] hover:border-brand-secondary/40 active:scale-95;
+    @apply bg-white border border-[#d4ddd0] rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:border-brand-secondary;
   }
-  
-  /* Text gradient utility */
+
+  /* Badges */
+  .badge-active {
+    @apply bg-brand-accent/20 text-brand-primary border border-brand-accent/40 px-3 py-1 rounded-full text-xs font-bold;
+  }
+  .badge-inactive {
+    @apply bg-slate-100 text-slate-500 border border-slate-200 px-3 py-1 rounded-full text-xs font-bold;
+  }
+
+  /* Glass (used on floating elements) */
+  .glass {
+    @apply bg-white/90 backdrop-blur-md border border-[#d4ddd0] shadow-sm;
+  }
+  .glass-strong {
+    @apply bg-white border border-[#d4ddd0] shadow-md;
+  }
+  .glass-subtle {
+    @apply bg-white/60 backdrop-blur-sm border border-[#d4ddd0]/50;
+  }
+
+  /* Text */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-primary via-brand-secondary to-amber-400;
+    @apply bg-clip-text text-transparent bg-linear-to-r from-brand-primary to-brand-secondary;
   }
 }
 
-/* Animations */
+/* ─── Animations ─── */
 @layer utilities {
   @keyframes float {
     0% { transform: translateY(0px); }
     50% { transform: translateY(-8px); }
     100% { transform: translateY(0px); }
   }
-  
   @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
   }
-  
   @keyframes slideUp {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  
   .animate-float {
     animation: float 4s ease-in-out infinite;
   }
-  
   .animate-fade-in {
     animation: fadeIn 0.4s ease-out forwards;
   }
-  
   .animate-slide-up {
     animation: slideUp 0.5s ease-out forwards;
   }

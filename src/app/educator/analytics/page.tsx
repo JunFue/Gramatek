@@ -53,10 +53,10 @@ export default async function EducatorAnalyticsPage() {
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
         <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-md relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/10 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
           <div className="flex items-center gap-4 mb-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100">
-              <Users className="w-6 h-6 text-blue-500" />
+            <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
+              <Users className="w-6 h-6 text-slate-500" />
             </div>
             <h3 className="text-slate-600 font-bold text-lg"><Translate fil="Kabuuang Mag-aaral" en="Total Students" /></h3>
           </div>
@@ -64,10 +64,10 @@ export default async function EducatorAnalyticsPage() {
         </div>
 
         <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-md relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/10 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
           <div className="flex items-center gap-4 mb-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center border border-emerald-100">
-              <Target className="w-6 h-6 text-emerald-500" />
+            <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
+              <Target className="w-6 h-6 text-slate-500" />
             </div>
             <h3 className="text-slate-600 font-bold text-lg"><Translate fil="Karaniwang Iskor" en="Avg Score" /></h3>
           </div>
@@ -100,7 +100,7 @@ export default async function EducatorAnalyticsPage() {
               return (
                 <div key={attempt.id} className="bg-slate-50 rounded-2xl p-4 flex items-center justify-between border border-slate-200 shadow-sm">
                    <div className="flex items-center gap-4">
-                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold border ${isPassing ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold border ${isPassing ? 'bg-slate-50 text-slate-600 border-slate-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
                        {Math.round(pct)}%
                      </div>
                      <div>

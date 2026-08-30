@@ -22,7 +22,7 @@ export function CopyButton({ text, className = '' }: { text: string, className?:
       className={`hover:bg-white/10 p-1.5 rounded transition-colors ${className}`}
       title="Copy to clipboard"
     >
-      {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-400 hover:text-white" />}
+      {copied ? <Check className="w-4 h-4 text-slate-400" /> : <Copy className="w-4 h-4 text-slate-400 hover:text-white" />}
     </button>
   )
 }

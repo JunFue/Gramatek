@@ -17,8 +17,8 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-background relative flex items-center justify-center p-6 overflow-hidden">
       {/* Background Orbs */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-brand-secondary/10 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-brand-accent/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-0 right-0 w-96 h-96 bg-brand-accent/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-brand-light/20 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="w-full max-w-4xl relative z-10 animate-slide-up">
         
@@ -35,14 +35,14 @@ export default function OnboardingPage() {
             disabled={isSubmitting}
             className={`text-left p-8 rounded-3xl transition-all duration-300 border-2 w-full flex flex-col group relative overflow-hidden shadow-lg
               ${selectedRole === 'educator' 
-                ? 'bg-white border-brand-primary ring-4 ring-brand-primary/20 shadow-[0_10px_30px_rgba(37,92,142,0.15)]' 
-                : 'glass-strong border-white/80 hover:border-brand-primary/50 hover:shadow-xl'}
+                ? 'bg-white border-brand-primary ring-4 ring-brand-primary/20 shadow-[0_10px_30px_rgba(49,105,78,0.15)]' 
+                : 'glass-strong border-[#d4ddd0] hover:border-brand-primary/50 hover:shadow-xl'}
             `}
           >
             {/* Hover Glow */}
             <div className="absolute inset-0 bg-gradient-to-tr from-brand-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             
-            <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center mb-8 shrink-0 relative z-10">
+            <div className="w-16 h-16 rounded-2xl bg-brand-light/40 flex items-center justify-center mb-8 shrink-0 relative z-10">
               <BookOpen className="w-8 h-8 text-brand-primary" />
             </div>
             
@@ -62,15 +62,15 @@ export default function OnboardingPage() {
             disabled={isSubmitting}
             className={`text-left p-8 rounded-3xl transition-all duration-300 border-2 w-full flex flex-col group relative overflow-hidden shadow-lg
               ${selectedRole === 'learner' 
-                ? 'bg-white border-emerald-500 ring-4 ring-emerald-500/20 shadow-[0_10px_30px_rgba(16,185,129,0.15)]' 
-                : 'glass-strong border-white/80 hover:border-emerald-400 hover:shadow-xl'}
+                ? 'bg-white border-brand-secondary ring-4 ring-brand-secondary/20 shadow-[0_10px_30px_rgba(101,140,88,0.15)]' 
+                : 'glass-strong border-[#d4ddd0] hover:border-brand-secondary/50 hover:shadow-xl'}
             `}
           >
             {/* Hover Glow */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-brand-secondary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-            <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mb-8 shrink-0 relative z-10">
-              <GraduationCap className="w-8 h-8 text-emerald-600" />
+            <div className="w-16 h-16 rounded-2xl bg-brand-accent/20 flex items-center justify-center mb-8 shrink-0 relative z-10">
+              <GraduationCap className="w-8 h-8 text-brand-secondary" />
             </div>
             
             <div className="relative z-10">
@@ -92,7 +92,7 @@ export default function OnboardingPage() {
               onClick={() => handleSubmit(selectedRole)}
               disabled={isSubmitting}
               className={`animate-slide-up px-8 py-4 rounded-full text-white font-extrabold text-lg flex items-center gap-3 transition-all hover:scale-105 active:scale-95 disabled:opacity-70 disabled:hover:scale-100 shadow-xl
-                ${selectedRole === 'educator' ? 'bg-brand-primary hover:bg-brand-primary/90 shadow-[0_8px_25px_rgba(37,92,142,0.35)]' : 'bg-emerald-600 hover:bg-emerald-700 shadow-[0_8px_25px_rgba(16,185,129,0.35)]'}
+                ${selectedRole === 'educator' ? 'bg-brand-primary hover:bg-brand-secondary shadow-[0_8px_25px_rgba(49,105,78,0.35)]' : 'bg-brand-secondary hover:bg-brand-primary shadow-[0_8px_25px_rgba(101,140,88,0.35)]'}
               `}
             >
               {isSubmitting ? (
