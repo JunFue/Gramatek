@@ -327,7 +327,7 @@ export function StudentLivePlayerClient({
 
   // Role permissions
   const isGroupMode = session?.mode === 'group'
-  const isLeader = !isGroupMode || (myGroup && myGroup.leader_id === currentUserId)
+  const isLeader = !isGroupMode || Boolean(myGroup && myGroup.leader_id === currentUserId)
   const isQuestionRevealed = !!(
     currentQuestion?.revealed_at ||
     session?.results_revealed_at ||

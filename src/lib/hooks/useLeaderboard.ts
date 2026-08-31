@@ -56,14 +56,21 @@ export function useLeaderboard(
           }
         })
 
-        const entries: LeaderboardEntry[] = (participants || []).map((p: any) => ({
-          id: p.student_id,
-          name: p.profiles?.full_name || 'Mag-aaral',
-          avatar_url: p.profiles?.avatar_url || null,
-          score: p.total_score || 0,
-          total_response_ms: responseTimeMap.get(p.student_id) || 0,
-          is_group: false
-        }))
+        const entries: LeaderboardEntry[] = ((participants || []) as unknown as Array<{
+          student_id: string
+          total_score: number
+          profiles?: { full_name: string | null; avatar_url: string | null } | Array<{ full_name: string | null; avatar_url: string | null }> | null
+        }>).map((p) => {
+          const prof = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles
+          return {
+            id: p.student_id,
+            name: prof?.full_name || 'Mag-aaral',
+            avatar_url: prof?.avatar_url || null,
+            score: p.total_score || 0,
+            total_response_ms: responseTimeMap.get(p.student_id) || 0,
+            is_group: false
+          }
+        })
 
         // Sort: score DESC, tie-break: response_ms ASC
         entries.sort((a, b) => {
@@ -123,15 +130,23 @@ export function useLeaderboard(
           }
         })
 
-        const entries: LeaderboardEntry[] = (groups || []).map((g: any) => ({
-          id: g.id,
-          name: g.label,
-          avatar_url: g.profiles?.avatar_url || null,
-          score: g.total_score || 0,
-          total_response_ms: responseTimeMap.get(g.id) || 0,
-          is_group: true,
-          member_count: groupMemberCountMap.get(g.id) || 0
-        }))
+        const entries: LeaderboardEntry[] = ((groups || []) as unknown as Array<{
+          id: string
+          label: string
+          total_score: number
+          profiles?: { full_name: string | null; avatar_url: string | null } | Array<{ full_name: string | null; avatar_url: string | null }> | null
+        }>).map((g) => {
+          const prof = Array.isArray(g.profiles) ? g.profiles[0] : g.profiles
+          return {
+            id: g.id,
+            name: g.label,
+            avatar_url: prof?.avatar_url || null,
+            score: g.total_score || 0,
+            total_response_ms: responseTimeMap.get(g.id) || 0,
+            is_group: true,
+            member_count: groupMemberCountMap.get(g.id) || 0
+          }
+        })
 
         entries.sort((a, b) => {
           if (b.score !== a.score) return b.score - a.score
@@ -147,12 +162,18 @@ export function useLeaderboard(
     }
   }, [sessionId, mode, supabase])
 
-  useEffect(() => {
-    fetchScores()
-  }, [fetchScores])
-
   // Realtime subscription for score updates
   useEffect(() => {
+    let isMounted = true
+
+    const loadInitial = async () => {
+      if (isMounted) {
+        await fetchScores()
+      }
+    }
+
+    loadInitial()
+
     const table = mode === 'individual' ? 'live_session_participants' : 'live_session_groups'
     const channel = supabase.channel(`leaderboard-${sessionId}-${mode}`)
 
@@ -172,6 +193,7 @@ export function useLeaderboard(
       .subscribe()
 
     return () => {
+      isMounted = false
       supabase.removeChannel(channel)
     }
   }, [sessionId, mode, supabase, fetchScores])

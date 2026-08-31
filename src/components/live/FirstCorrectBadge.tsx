@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Zap, Trophy } from 'lucide-react'
+import { Zap } from 'lucide-react'
 import { Translate } from '@/components/Translate'
 
 interface FirstCorrectBadgeProps {
@@ -10,19 +10,23 @@ interface FirstCorrectBadgeProps {
   questionId: string
 }
 
+interface FirstCorrectResult {
+  name: string
+  response_ms: number
+  avatar_url?: string | null
+  is_group?: boolean
+}
+
 export function FirstCorrectBadge({ sessionId, questionId }: FirstCorrectBadgeProps) {
-  const [firstCorrect, setFirstCorrect] = useState<{
-    name: string
-    response_ms: number
-    avatar_url?: string | null
-    is_group?: boolean
-  } | null>(null)
+  const [firstCorrect, setFirstCorrect] = useState<FirstCorrectResult | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
 
   useEffect(() => {
     if (!sessionId || !questionId) return
 
+    let isMounted = true
     const supabase = createClient()
+
     async function fetchFirstCorrect() {
       try {
         const { data, error } = await supabase
@@ -43,28 +47,44 @@ export function FirstCorrectBadge({ sessionId, questionId }: FirstCorrectBadgePr
           .limit(1)
           .maybeSingle()
 
-        if (!error && data) {
-          const name = data.group_id
-            ? (data as any).live_session_groups?.label || 'Pangkat'
-            : (data as any).profiles?.full_name || 'Mag-aaral'
+        if (!error && data && isMounted) {
+          const row = data as unknown as {
+            response_ms: number
+            group_id: string | null
+            profiles?: { full_name: string | null; avatar_url: string | null } | Array<{ full_name: string | null; avatar_url: string | null }> | null
+            live_session_groups?: { label: string } | Array<{ label: string }> | null
+          }
+
+          const profileObj = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+          const groupObj = Array.isArray(row.live_session_groups) ? row.live_session_groups[0] : row.live_session_groups
+
+          const name = row.group_id
+            ? groupObj?.label || 'Pangkat'
+            : profileObj?.full_name || 'Mag-aaral'
 
           setFirstCorrect({
             name,
-            response_ms: data.response_ms,
-            avatar_url: (data as any).profiles?.avatar_url || null,
-            is_group: !!data.group_id
+            response_ms: row.response_ms,
+            avatar_url: profileObj?.avatar_url || null,
+            is_group: Boolean(row.group_id)
           })
-        } else {
+        } else if (isMounted) {
           setFirstCorrect(null)
         }
       } catch (err) {
         console.error('Error fetching first correct badge:', err)
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     fetchFirstCorrect()
+
+    return () => {
+      isMounted = false
+    }
   }, [sessionId, questionId])
 
   if (loading || !firstCorrect) return null

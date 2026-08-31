@@ -1,13 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { saveQuiz } from '@/app/educator/quizzes/actions'
-import { ArrowLeft, Save, FileQuestion, Plus, Trash2, GripVertical, CheckCircle2, Clock, Swords, CalendarClock, Trophy, Zap, Shuffle, Shield, Target, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { saveQuiz, updateQuiz } from '@/app/educator/quizzes/actions'
+import { 
+  ArrowLeft, Save, FileQuestion, Plus, Trash2, GripVertical, 
+  CheckCircle2, Clock, Swords, CalendarClock, Trophy, Zap, 
+  Shuffle, Shield, Target, Loader2, Eye, HelpCircle, Sparkles
+} from 'lucide-react'
 import Link from 'next/link'
 import { Translate } from '@/components/Translate'
 
 type QuestionType = 'multiple_choice' | 'fill_blank' | 'enumeration'
 type GameMode = 'mastery' | 'scheduled' | 'survival'
+type FeedbackTiming = 'immediate' | 'delayed'
 
 interface CardData {
   id: string
@@ -20,27 +26,91 @@ interface CardData {
 
 const GAME_MODES: { id: GameMode; label: { fil: string; en: string }; description: { fil: string; en: string }; icon: any; color: string; bg: string }[] = [
   { id: 'mastery', label: { fil: 'Mode ng Masteriya', en: 'Mastery Mode' }, description: { fil: 'Bukas na pagsasanay na may limitadong retake. Ang pinakamataas o average na marka ang nakatala.', en: 'Open practice with limited retakes. Best or average score recorded.' }, icon: Trophy, color: 'text-slate-500', bg: 'bg-slate-50 border-slate-200 hover:border-slate-400' },
-  { id: 'scheduled', label: { fil: 'Nakatakdang Misyon', en: 'Scheduled Mission' }, description: { fil: 'Magtakda ng oras. Makakatanggap ng abiso ang mga mag-aaral.', en: 'Set a time window. Students receive notifications and take it individually.' }, icon: CalendarClock, color: 'text-slate-500', bg: 'bg-slate-50 border-slate-200 hover:border-slate-400' },
+  { id: 'scheduled', label: { fil: 'Nakatakdang Misyon', en: 'Scheduled Mission' }, description: { fil: 'Magtakda ng oras. Makakatanggap ng abiso ang mga mag-aaral at may skip at review bago magpasa.', en: 'Set a time window. Students can skip, review answers, and submit individually.' }, icon: CalendarClock, color: 'text-slate-500', bg: 'bg-slate-50 border-slate-200 hover:border-slate-400' },
   { id: 'survival', label: { fil: 'Mode ng Kaligtasan', en: 'Survival / Streak' }, description: { fil: 'Ginagantimpalaan ng streak multiplier ang pagiging pare-pareho. Matanggal kapag maraming mali.', en: 'Streak multipliers reward consistency. Miss too many and you\'re eliminated.' }, icon: Zap, color: 'text-rose-500', bg: 'bg-rose-50 border-rose-200 hover:border-rose-400' },
 ]
 
-export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: any[], defaultClassroomId?: string }) {
-  const [classroomId, setClassroomId] = useState(defaultClassroomId || classrooms[0]?.id || '')
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [timeLimit, setTimeLimit] = useState(60)
-  const [cards, setCards] = useState<CardData[]>([])
+function formatDatetimeForInput(dateStr?: string | null): string {
+  if (!dateStr) return ''
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return ''
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    const hours = String(d.getHours()).padStart(2, '0')
+    const minutes = String(d.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  } catch {
+    return ''
+  }
+}
+
+export function QuizBuilder({ 
+  classrooms, 
+  defaultClassroomId,
+  initialQuiz,
+  initialCards
+}: { 
+  classrooms: any[], 
+  defaultClassroomId?: string,
+  initialQuiz?: any,
+  initialCards?: any[]
+}) {
+  const router = useRouter()
+  const isEditMode = !!initialQuiz
+
+  const [classroomId, setClassroomId] = useState(
+    initialQuiz?.classroom_id || defaultClassroomId || classrooms[0]?.id || ''
+  )
+  const [title, setTitle] = useState(initialQuiz?.title || '')
+  const [description, setDescription] = useState(initialQuiz?.description || '')
+  const [timeLimit, setTimeLimit] = useState(initialQuiz?.time_limit_seconds || 60)
+  
+  // Cards State
+  const [cards, setCards] = useState<CardData[]>(() => {
+    if (initialCards && initialCards.length > 0) {
+      return initialCards.map((c: any) => ({
+        id: c.id || Math.random().toString(36).substr(2, 9),
+        type: c.question_type || c.type || 'multiple_choice',
+        text: c.question_text || c.text || '',
+        options: c.options || (c.question_type === 'multiple_choice' ? ['', '', '', ''] : undefined),
+        correctAnswer: c.correct_answer !== undefined ? c.correct_answer : c.correctAnswer,
+        timeLimitOverride: c.time_limit_override || c.timeLimitOverride || null
+      }))
+    }
+    return []
+  })
   
   // Game Mode State
-  const [gameMode, setGameMode] = useState<GameMode>('mastery')
-  const [maxAttempts, setMaxAttempts] = useState<number | null>(3)
-  const [scoringMethod, setScoringMethod] = useState<'highest' | 'average'>('highest')
-  const [scheduledStart, setScheduledStart] = useState('')
-  const [scheduledEnd, setScheduledEnd] = useState('')
-  const [survivalStrikes, setSurvivalStrikes] = useState(3)
-  const [streakMultiplier, setStreakMultiplier] = useState(true)
-  const [shuffleQuestions, setShuffleQuestions] = useState(false)
-  const [shuffleOptions, setShuffleOptions] = useState(false)
+  const [gameMode, setGameMode] = useState<GameMode>(initialQuiz?.game_mode || 'mastery')
+  const [maxAttempts, setMaxAttempts] = useState<number | null>(
+    initialQuiz?.max_attempts !== undefined ? initialQuiz.max_attempts : 3
+  )
+  const [scoringMethod, setScoringMethod] = useState<'highest' | 'average'>(
+    initialQuiz?.scoring_method || 'highest'
+  )
+  const [scheduledStart, setScheduledStart] = useState(
+    formatDatetimeForInput(initialQuiz?.scheduled_start)
+  )
+  const [scheduledEnd, setScheduledEnd] = useState(
+    formatDatetimeForInput(initialQuiz?.scheduled_end)
+  )
+  const [survivalStrikes, setSurvivalStrikes] = useState(initialQuiz?.survival_strikes || 3)
+  const [streakMultiplier, setStreakMultiplier] = useState(
+    initialQuiz?.streak_multiplier !== undefined ? initialQuiz.streak_multiplier : true
+  )
+  const [shuffleQuestions, setShuffleQuestions] = useState(
+    initialQuiz?.shuffle_questions || false
+  )
+  const [shuffleOptions, setShuffleOptions] = useState(
+    initialQuiz?.shuffle_options || false
+  )
+  
+  // Feedback Timing (Answer Reveal) State
+  const [feedbackTiming, setFeedbackTiming] = useState<FeedbackTiming>(
+    initialQuiz?.feedback_timing || 'immediate'
+  )
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -65,7 +135,7 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
   }
 
   const handleSave = async (is_published: boolean) => {
-    if (!classroomId || !title) return alert('Classroom and Title are required.')
+    if (!classroomId || !title.trim()) return alert('Classroom and Title are required.')
     if (cards.length === 0) return alert('Add at least one question.')
     if (gameMode === 'scheduled') {
       if (!scheduledStart || !scheduledEnd) return alert('Scheduled missions require a start and end time.')
@@ -74,7 +144,7 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
     
     setIsSubmitting(true)
     try {
-      await saveQuiz(classroomId, title, description, timeLimit, is_published, cards, {
+      const config = {
         gameMode,
         maxAttempts: gameMode === 'mastery' ? maxAttempts : null,
         scoringMethod: gameMode === 'mastery' ? scoringMethod : 'highest',
@@ -84,11 +154,48 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
         streakMultiplier: gameMode === 'survival' ? streakMultiplier : false,
         shuffleQuestions,
         shuffleOptions,
-      })
-    } catch (e) {
-      console.error(e)
+        feedbackTiming,
+      }
+
+      let res
+      if (isEditMode) {
+        res = await updateQuiz(
+          initialQuiz.id,
+          classroomId,
+          title,
+          description,
+          timeLimit,
+          is_published,
+          cards,
+          config
+        )
+      } else {
+        res = await saveQuiz(
+          classroomId,
+          title,
+          description,
+          timeLimit,
+          is_published,
+          cards,
+          config
+        )
+      }
+
+      if (res?.error) {
+        alert(res.error)
+        setIsSubmitting(false)
+        return
+      }
+
+      const targetQuizId = res?.quizId || initialQuiz?.id
+      if (targetQuizId) {
+        router.push(`/educator/quizzes/${targetQuizId}`)
+        router.refresh()
+      }
+    } catch (e: any) {
+      console.error('Failed to save quiz:', e)
       setIsSubmitting(false)
-      alert('Failed to save quiz.')
+      alert(e?.message || 'Failed to save quiz.')
     }
   }
 
@@ -97,20 +204,36 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
   return (
     <div className="p-8 max-w-4xl mx-auto animate-fade-in relative z-10">
       
-      <div className="flex items-center justify-between mb-8">
-        <Link href={defaultClassroomId ? `/educator/classrooms/${defaultClassroomId}` : "/educator"} className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors font-bold">
+      {/* Top Header & Save Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <Link 
+          href={
+            isEditMode 
+              ? `/educator/quizzes/${initialQuiz.id}` 
+              : defaultClassroomId 
+              ? `/educator/classrooms/${defaultClassroomId}` 
+              : "/educator"
+          } 
+          className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors font-bold"
+        >
           <ArrowLeft className="w-4 h-4" />
           <Translate fil="Bumalik" en="Back" />
         </Link>
-        <div className="flex items-center gap-3">
+
+        <div className="flex flex-wrap items-center gap-3">
           <button 
             disabled={isSubmitting}
             onClick={() => handleSave(false)}
-            className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-full text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+            className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-full text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer shadow-xs"
           >
             {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            <Translate fil="I-save bilang Draft" en="Save Draft" />
+            {isEditMode ? (
+              <Translate fil="I-save bilang Draft / Withdrawn" en="Save as Draft / Withdrawn" />
+            ) : (
+              <Translate fil="I-save bilang Draft" en="Save Draft" />
+            )}
           </button>
+          
           <button 
             disabled={isSubmitting}
             onClick={() => handleSave(true)}
@@ -124,12 +247,39 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
             ) : (
               <>
                 <Save className="w-4 h-4" /> 
-                <Translate fil="I-publish para Mai-play" en="Publish Playable" />
+                {isEditMode ? (
+                  <Translate fil="I-update at I-publish" en="Update & Publish" />
+                ) : (
+                  <Translate fil="I-publish para Mai-play" en="Publish Playable" />
+                )}
               </>
             )}
           </button>
         </div>
       </div>
+
+      {/* Edit Mode Notice Banner */}
+      {isEditMode && (
+        <div className="mb-6 p-4 bg-slate-100 border border-slate-300 rounded-2xl flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="w-5 h-5 text-brand-primary" />
+            <div>
+              <p className="text-slate-900 font-heading font-bold text-sm">
+                <Translate fil="Nasa Mode ng Pag-eedit ng Pagsusulit" en="Currently Editing Quiz" />
+              </p>
+              <p className="text-slate-500 text-xs font-medium">
+                {initialQuiz.is_published 
+                  ? <Translate fil="Nailathala ang pagsusulit na ito. Maaari mo itong baguhin o i-save muli." en="This quiz is currently published. You can modify cards and settings." />
+                  : <Translate fil="Naka-draft / withdrawn ang pagsusulit na ito." en="This quiz is currently drafted / withdrawn." />
+                }
+              </p>
+            </div>
+          </div>
+          <span className={`px-2.5 py-1 rounded-md text-xs font-extrabold ${initialQuiz.is_published ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+            {initialQuiz.is_published ? 'Nailathala' : 'Draft / Withdrawn'}
+          </span>
+        </div>
+      )}
 
       {/* ── Game Mode Selector ── */}
       <div className="bg-white rounded-3xl p-8 mb-8 border border-slate-200 relative overflow-hidden shadow-sm">
@@ -139,7 +289,9 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
           <Swords className="w-6 h-6 text-brand-primary" />
           <Translate fil="Mode ng Laro" en="Game Mode" />
         </h2>
-        <p className="text-slate-600 text-sm mb-6 relative z-10 font-medium"><Translate fil="Piliin kung paano mararanasan ng mga mag-aaral ang pagsusulit na ito." en="Choose how students will experience this quiz." /></p>
+        <p className="text-slate-600 text-sm mb-6 relative z-10 font-medium">
+          <Translate fil="Piliin kung paano mararanasan ng mga mag-aaral ang pagsusulit na ito." en="Choose how students will experience this quiz." />
+        </p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
           {GAME_MODES.map((mode) => {
@@ -149,7 +301,11 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
               <button
                 key={mode.id}
                 onClick={() => setGameMode(mode.id)}
-                className={`p-5 rounded-2xl border text-left transition-all duration-200 ${isSelected ? `${mode.bg} scale-[1.02] shadow-md ring-1 ring-slate-200` : 'bg-slate-50 border-slate-200 hover:bg-slate-100 shadow-sm'}`}
+                className={`p-5 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${
+                  isSelected 
+                    ? `${mode.bg} scale-[1.02] shadow-md ring-1 ring-slate-200` 
+                    : 'bg-slate-50 border-slate-200 hover:bg-slate-100 shadow-sm'
+                }`}
               >
                 <div className="flex items-center gap-3 mb-2">
                   <Icon className={`w-5 h-5 ${isSelected ? mode.color : 'text-slate-400'}`} />
@@ -192,14 +348,16 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
               <label className="text-sm font-bold text-slate-800"><Translate fil="Paraan ng Pagmamarka" en="Scoring Method" /></label>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={() => setScoringMethod('highest')}
-                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border ${scoringMethod === 'highest' ? 'bg-slate-500 text-white border-slate-600 shadow-sm' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-sm'}`}
+                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border cursor-pointer ${scoringMethod === 'highest' ? 'bg-slate-500 text-white border-slate-600 shadow-sm' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-sm'}`}
                 >
                   🏆 <Translate fil="Pinakamataas na Iskor" en="Highest Score" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setScoringMethod('average')}
-                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border ${scoringMethod === 'average' ? 'bg-slate-500 text-white border-slate-600 shadow-sm' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-sm'}`}
+                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border cursor-pointer ${scoringMethod === 'average' ? 'bg-slate-500 text-white border-slate-600 shadow-sm' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-sm'}`}
                 >
                   📊 <Translate fil="Karaniwang Iskor" en="Average Score" />
                 </button>
@@ -234,7 +392,9 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
               />
             </div>
           </div>
-          <p className="text-xs text-slate-700/80 font-medium mt-3"><Translate fil="Makakatanggap ng abiso ang mga enrolled kapag bukas na ang pagsusulit." en="Students enrolled in this classroom will receive a notification when the quiz becomes available." /></p>
+          <p className="text-xs text-slate-700/80 font-medium mt-3">
+            <Translate fil="Makakatanggap ng abiso ang mga mag-aaral kapag bukas na ang pagsusulit. Maaari silang mag-skip at mag-review bago magpasa." en="Students enrolled in this classroom will receive a notification and can skip & review answers before final submission." />
+          </p>
         </div>
       )}
 
@@ -252,8 +412,9 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
                 {[1, 2, 3, 5].map(n => (
                   <button
                     key={n}
+                    type="button"
                     onClick={() => setSurvivalStrikes(n)}
-                    className={`w-12 h-12 rounded-xl border text-lg font-bold transition-all shadow-sm ${survivalStrikes === n ? 'bg-rose-500 border-rose-600 text-white' : 'bg-white border-rose-200 text-rose-600 hover:bg-rose-100'}`}
+                    className={`w-12 h-12 rounded-xl border text-lg font-bold transition-all shadow-sm cursor-pointer ${survivalStrikes === n ? 'bg-rose-500 border-rose-600 text-white' : 'bg-white border-rose-200 text-rose-600 hover:bg-rose-100'}`}
                   >
                     {n}
                   </button>
@@ -265,8 +426,9 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
                 <Target className="w-4 h-4 text-rose-500" /> <Translate fil="Multiplier ng Streak" en="Streak Multiplier" />
               </label>
               <button
+                type="button"
                 onClick={() => setStreakMultiplier(!streakMultiplier)}
-                className={`w-full py-3 rounded-xl text-sm font-bold transition-all border shadow-sm ${streakMultiplier ? 'bg-rose-500 border-rose-600 text-white' : 'bg-white border-rose-200 text-rose-600 hover:bg-rose-100'}`}
+                className={`w-full py-3 rounded-xl text-sm font-bold transition-all border shadow-sm cursor-pointer ${streakMultiplier ? 'bg-rose-500 border-rose-600 text-white' : 'bg-white border-rose-200 text-rose-600 hover:bg-rose-100'}`}
               >
                 {streakMultiplier ? <Translate fil="🔥 Bukas — Dumadami ang puntos kapag sunod-sunod ang tama" en="🔥 Enabled — Points multiply on streaks" /> : <Translate fil="Sarado — Flat na pagmamarka" en="Disabled — Flat scoring" />}
               </button>
@@ -274,6 +436,88 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
           </div>
         </div>
       )}
+
+      {/* ── Feedback Reveal Timing Settings (Mastery & Scheduled) ── */}
+      <div className="bg-white rounded-3xl p-8 mb-8 border border-slate-200 relative overflow-hidden shadow-sm">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 rounded-full blur-[60px] -mr-24 -mt-24 pointer-events-none" />
+        
+        <h2 className="text-xl font-heading font-bold text-slate-900 mb-2 relative z-10 flex items-center gap-2">
+          <Eye className="w-5 h-5 text-brand-primary" />
+          <Translate fil="Oras ng Pagpapakita ng Tamang Sagot at Iskor" en="Answer & Score Feedback Timing" />
+        </h2>
+        <p className="text-slate-600 text-sm mb-6 relative z-10 font-medium">
+          <Translate 
+            fil="Piliin kung kailan makikita ng mag-aaral ang tamang sagot at ang kanilang kabuuang marka." 
+            en="Choose when students will see correct answers and their final score." 
+          />
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
+          {/* Option 1: Immediate / Every Question */}
+          <button
+            type="button"
+            onClick={() => setFeedbackTiming('immediate')}
+            className={`p-5 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+              feedbackTiming === 'immediate'
+                ? 'bg-emerald-50/80 border-emerald-300 ring-2 ring-emerald-400 shadow-md scale-[1.01]'
+                : 'bg-slate-50 border-slate-200 hover:bg-slate-100 shadow-xs'
+            }`}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-heading font-bold text-slate-900 text-base flex items-center gap-2">
+                  <CheckCircle2 className={`w-5 h-5 ${feedbackTiming === 'immediate' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                  <Translate fil="Bawat Pagkatapos ng Tanong" en="After Every Question" />
+                </span>
+                {feedbackTiming === 'immediate' && (
+                  <span className="px-2 py-0.5 bg-emerald-200 text-emerald-800 text-[10px] font-extrabold rounded-md">Aktibo</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                <Translate 
+                  fil="Ipinapakita agad kung tama o mali ang sagot at ibinubunyag ang tamang sagot pagkatapos sagutan ang bawat aytem." 
+                  en="Shows immediate right/wrong feedback and reveals the correct answer right after each question." 
+                />
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold">
+              <span>💡</span> <Translate fil="Angkop para sa aktibong pagsasanay" en="Great for active practice" />
+            </div>
+          </button>
+
+          {/* Option 2: Delayed / After Whole Test */}
+          <button
+            type="button"
+            onClick={() => setFeedbackTiming('delayed')}
+            className={`p-5 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+              feedbackTiming === 'delayed'
+                ? 'bg-blue-50/80 border-blue-300 ring-2 ring-blue-400 shadow-md scale-[1.01]'
+                : 'bg-slate-50 border-slate-200 hover:bg-slate-100 shadow-xs'
+            }`}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-heading font-bold text-slate-900 text-base flex items-center gap-2">
+                  <Trophy className={`w-5 h-5 ${feedbackTiming === 'delayed' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <Translate fil="Pagkatapos ng Buong Pagsusulit" en="After Whole Test" />
+                </span>
+                {feedbackTiming === 'delayed' && (
+                  <span className="px-2 py-0.5 bg-blue-200 text-blue-800 text-[10px] font-extrabold rounded-md">Aktibo</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                <Translate 
+                  fil="Walang sagot na ipinapakita habang sumasagot. Ang kabuuang iskor at pagsusuri ng mga tanong ay makikita lamang matapos ipasa ang buong pagsusulit." 
+                  en="No answers are shown during the test. Total score and answer review are revealed only after submitting the whole test." 
+                />
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold">
+              <span>📝</span> <Translate fil="Angkop para sa pormal na eksaminasyon at misyon" en="Ideal for formal exams and missions" />
+            </div>
+          </button>
+        </div>
+      </div>
 
       {/* ── Quiz Settings ── */}
       <div className="bg-white rounded-3xl p-8 mb-8 border border-slate-200 relative overflow-hidden shadow-sm">
@@ -287,7 +531,11 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
         <div className="space-y-6 relative z-10">
           <div className="flex flex-col gap-2">
             <label className="text-sm font-bold text-slate-700"><Translate fil="I-assign sa Silid-aralan" en="Assign to Classroom" /></label>
-            <select value={classroomId} onChange={(e) => setClassroomId(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all appearance-none shadow-sm">
+            <select 
+              value={classroomId} 
+              onChange={(e) => setClassroomId(e.target.value)} 
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all appearance-none shadow-sm"
+            >
               <option value="" disabled><Translate fil="Pumili ng Silid..." en="Select Classroom..." /></option>
               {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -297,8 +545,9 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
             <label className="text-sm font-bold text-slate-700"><Translate fil="Pamagat ng Pagsusulit" en="Quiz Title" /></label>
             <input 
               type="text" 
-              value={title} onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Chapter 1 Review"
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Kabanata 1: Mga Bahagi ng Pananalita"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all shadow-sm"
             />
           </div>
@@ -306,8 +555,9 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
           <div className="flex flex-col gap-2">
             <label className="text-sm font-bold text-slate-700"><Translate fil="Paglalarawan" en="Description" /></label>
             <textarea 
-              value={description} onChange={(e) => setDescription(e.target.value)}
-              placeholder="What is this quiz about?"
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Tungkol saan ang pagsusulit na ito?"
               rows={2}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all resize-none shadow-sm"
             />
@@ -316,7 +566,11 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-slate-700"><Translate fil="Oras Bawat Tanong" en="Default Time per Question" /></label>
-              <select value={timeLimit} onChange={(e) => setTimeLimit(Number(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all appearance-none shadow-sm">
+              <select 
+                value={timeLimit} 
+                onChange={(e) => setTimeLimit(Number(e.target.value))} 
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all appearance-none shadow-sm"
+              >
                  <option value={10}>10 Seconds (Blitz)</option>
                  <option value={15}>15 Seconds (Rapid)</option>
                  <option value={30}>30 Seconds (Fast)</option>
@@ -329,14 +583,20 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
               <label className="text-sm font-bold text-slate-700"><Translate fil="Paiba-ibahin ang Posisyon (Shuffle)" en="Shuffle Options" /></label>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={() => setShuffleQuestions(!shuffleQuestions)}
-                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border flex items-center justify-center gap-2 shadow-sm ${shuffleQuestions ? 'bg-violet-100 border-violet-300 text-violet-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border flex items-center justify-center gap-2 shadow-sm cursor-pointer ${
+                    shuffleQuestions ? 'bg-violet-100 border-violet-300 text-violet-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
                 >
                   <Shuffle className="w-4 h-4" /> <Translate fil="Mga Tanong" en="Questions" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShuffleOptions(!shuffleOptions)}
-                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border flex items-center justify-center gap-2 shadow-sm ${shuffleOptions ? 'bg-violet-100 border-violet-300 text-violet-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border flex items-center justify-center gap-2 shadow-sm cursor-pointer ${
+                    shuffleOptions ? 'bg-violet-100 border-violet-300 text-violet-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
                 >
                   <Shuffle className="w-4 h-4" /> <Translate fil="Mga Pagpipilian" en="Choices" />
                 </button>
@@ -355,7 +615,12 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
         {cards.map((card, index) => (
           <div key={card.id} className="bg-white rounded-xl p-6 relative group border border-slate-200 animate-slide-up shadow-sm">
             <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button onClick={() => removeCard(card.id)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-colors border border-red-100">
+              <button 
+                type="button"
+                onClick={() => removeCard(card.id)} 
+                className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-colors border border-red-100 cursor-pointer"
+                title="Burahin ang tanong"
+              >
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
@@ -363,8 +628,11 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-brand-primary">
                 <GripVertical className="w-4 h-4 text-slate-400 cursor-move" />
-                <span className="font-mono text-sm font-bold uppercase tracking-wider"><Translate fil={`Card ${index + 1} - ${card.type.replace('_', ' ')}`} en={`Card ${index + 1} - ${card.type.replace('_', ' ')}`} /></span>
+                <span className="font-mono text-sm font-bold uppercase tracking-wider">
+                  <Translate fil={`Card ${index + 1} - ${card.type.replace('_', ' ')}`} en={`Card ${index + 1} - ${card.type.replace('_', ' ')}`} />
+                </span>
               </div>
+              
               {/* Per-card timer override */}
               <div className="flex items-center gap-2">
                 <Clock className="w-3.5 h-3.5 text-slate-500" />
@@ -383,7 +651,7 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
 
             <div className="space-y-4">
               <input 
-                 type="text"
+                 type="text" 
                  placeholder="Question text..."
                  value={card.text}
                  onChange={(e) => updateCard(card.id, { text: e.target.value })}
@@ -395,13 +663,16 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
                   {card.options?.map((opt, i) => (
                     <div key={i} className="flex items-center gap-2">
                        <button 
+                         type="button"
                          onClick={() => updateCard(card.id, { correctAnswer: i })}
-                         className={`w-6 h-6 rounded-full flex items-center justify-center border transition-colors shrink-0 ${card.correctAnswer === i ? 'bg-slate-500 border-slate-500 text-white' : 'border-slate-300 hover:border-slate-400'}`}
+                         className={`w-6 h-6 rounded-full flex items-center justify-center border transition-colors shrink-0 cursor-pointer ${
+                           card.correctAnswer === i ? 'bg-slate-500 border-slate-500 text-white' : 'border-slate-300 hover:border-slate-400'
+                         }`}
                        >
                          {card.correctAnswer === i && <CheckCircle2 className="w-4 h-4" />}
                        </button>
                        <input 
-                         type="text"
+                         type="text" 
                          placeholder={`Option ${i + 1}`}
                          value={opt}
                          onChange={(e) => {
@@ -409,25 +680,33 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
                            newOpts[i] = e.target.value;
                            updateCard(card.id, { options: newOpts })
                          }}
-                         className={`flex-1 bg-white border rounded-lg px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-brand-primary ${card.correctAnswer === i ? 'border-slate-300 bg-slate-50 shadow-sm' : 'border-slate-200'}`}
+                         className={`flex-1 bg-white border rounded-lg px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-brand-primary ${
+                           card.correctAnswer === i ? 'border-slate-300 bg-slate-50 shadow-sm' : 'border-slate-200'
+                         }`}
                        />
                     </div>
                   ))}
-                  <p className="text-xs text-slate-500 font-medium col-span-full mt-1"><Translate fil="Piliin ang bilog para itakda ang tamang sagot." en="Select the circle to mark the correct answer." /></p>
+                  <p className="text-xs text-slate-500 font-medium col-span-full mt-1">
+                    <Translate fil="Piliin ang bilog para itakda ang tamang sagot." en="Select the circle to mark the correct answer." />
+                  </p>
                 </div>
               )}
 
               {card.type === 'fill_blank' && (
                 <div className="mt-4">
-                  <label className="text-xs text-slate-500 font-bold block mb-1"><Translate fil="Tamang Sagot" en="Correct Answer" /></label>
+                  <label className="text-xs text-slate-500 font-bold block mb-1">
+                    <Translate fil="Tamang Sagot" en="Correct Answer" />
+                  </label>
                   <input 
-                     type="text"
+                     type="text" 
                      placeholder="The exact word/phrase"
                      value={card.correctAnswer}
                      onChange={(e) => updateCard(card.id, { correctAnswer: e.target.value })}
                      className="w-full max-w-sm bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-slate-700 font-bold focus:outline-none focus:border-brand-primary transition-all shadow-sm"
                   />
-                  <p className="text-xs text-slate-500 font-medium mt-2"><Translate fil='Tiyaking ilagay ang nawawalang bahagi gamit ang "___" sa text ng tanong.' en='Make sure to indicate the missing part with "___" in your question text.' /></p>
+                  <p className="text-xs text-slate-500 font-medium mt-2">
+                    <Translate fil='Tiyaking ilagay ang nawawalang bahagi gamit ang "___" sa text ng tanong.' en='Make sure to indicate the missing part with "___" in your question text.' />
+                  </p>
                 </div>
               )}
 
@@ -438,13 +717,25 @@ export function QuizBuilder({ classrooms, defaultClassroomId }: { classrooms: an
         {/* Add Card Menu */}
         <div className="bg-slate-50 rounded-xl p-4 border border-dashed border-slate-300 flex flex-col md:flex-row items-center justify-center gap-4 shadow-sm">
            <span className="text-sm font-bold text-slate-500"><Translate fil="Magdagdag ng card:" en="Add new card:" /></span>
-           <button onClick={() => addCard('multiple_choice')} className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm">
+           <button 
+             type="button"
+             onClick={() => addCard('multiple_choice')} 
+             className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+           >
              <Plus className="w-4 h-4" /> <Translate fil="Pagpipilian" en="Multiple Choice" />
            </button>
-           <button onClick={() => addCard('fill_blank')} className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm">
+           <button 
+             type="button"
+             onClick={() => addCard('fill_blank')} 
+             className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+           >
              <Plus className="w-4 h-4" /> <Translate fil="Punan ang Patlang" en="Fill in the Blank" />
            </button>
-           <button onClick={() => alert("Enumeration coming soon")} className="px-4 py-2 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm">
+           <button 
+             type="button"
+             onClick={() => alert("Enumeration coming soon")} 
+             className="px-4 py-2 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+           >
              <Plus className="w-4 h-4" /> <Translate fil="Enumerasyon" en="Enumeration" />
            </button>
         </div>

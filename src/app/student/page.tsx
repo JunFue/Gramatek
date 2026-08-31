@@ -9,23 +9,28 @@ export default async function StudentDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: enrollments, error } = await supabase
-    .from('classroom_members')
-    .select(`
-      joined_at,
-      classrooms (
-        id,
-        name,
-        description,
-        is_active,
-        profiles!classrooms_educator_id_fkey ( full_name )
-      )
-    `)
-    .eq('student_id', user?.id)
-    .order('joined_at', { ascending: false })
+  let enrollments = null
+  if (user?.id) {
+    const { data, error } = await supabase
+      .from('classroom_members')
+      .select(`
+        joined_at,
+        classrooms (
+          id,
+          name,
+          description,
+          is_active,
+          profiles!classrooms_educator_id_fkey ( full_name )
+        )
+      `)
+      .eq('student_id', user.id)
+      .order('joined_at', { ascending: false })
 
-  if (error) {
-    console.error('Error fetching enrollments:', error)
+    if (error) {
+      console.error('Error fetching enrollments:', error.message || error)
+    } else {
+      enrollments = data
+    }
   }
 
   return (

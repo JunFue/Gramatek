@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { 
   Users, FileQuestion, ArrowLeft, Plus, Settings, RefreshCw, 
   Star, AlertTriangle, UserMinus, CheckCircle2, X, Edit3, 
-  Loader2, Zap
+  Loader2, Zap, Trash2
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -15,7 +15,8 @@ import {
   regenerateClassroomCode, 
   kickStudentFromClassroom, 
   giveStudentStar, 
-  giveStudentWarning 
+  giveStudentWarning,
+  deleteClassroom
 } from '@/app/educator/classrooms/actions'
 
 interface ClassroomManagerClientProps {
@@ -156,10 +157,24 @@ export function ClassroomManagerClient({ classroom, quizzes }: ClassroomManagerC
     )
   }
 
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+
   const closeStudentModal = () => {
     setActiveStudent(null)
     setStudentActionType(null)
     setActionReason('')
+  }
+
+  const handleDeleteClassroom = async () => {
+    startTransition(async () => {
+      const res = await deleteClassroom(classroom.id)
+      if (res.error) {
+        showToast('error', res.error)
+        setIsDeleteModalOpen(false)
+      } else {
+        router.push('/educator/classrooms')
+      }
+    })
   }
 
   return (
@@ -206,6 +221,13 @@ export function ClassroomManagerClient({ classroom, quizzes }: ClassroomManagerC
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 <Translate fil="I-edit ang Detalye" en="Edit Details" />
+              </button>
+              <button 
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 rounded-full text-xs font-extrabold transition-all flex items-center gap-1.5 border border-rose-200 shadow-xs active:scale-95 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <Translate fil="Burahin" en="Delete" />
               </button>
             </div>
             <p className="text-slate-600 max-w-2xl text-base md:text-lg font-medium leading-relaxed mt-2">
@@ -292,11 +314,14 @@ export function ClassroomManagerClient({ classroom, quizzes }: ClassroomManagerC
                         <span>Nilikha {new Date(quiz.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
-                    <div>
+                    <div className="flex items-center gap-3">
                       <span className={`px-3 py-1 rounded-full text-xs font-black shadow-xs ${
                         quiz.is_published ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                       }`}>
-                        {quiz.is_published ? 'Nailathala' : 'Draft'}
+                        {quiz.is_published ? 'Nailathala' : 'Draft / Na-withdraw'}
+                      </span>
+                      <span className="p-2 rounded-xl bg-slate-100 group-hover:bg-brand-primary group-hover:text-white text-slate-500 transition-colors">
+                        <Edit3 className="w-4 h-4" />
                       </span>
                     </div>
                   </div>
@@ -692,6 +717,57 @@ export function ClassroomManagerClient({ classroom, quizzes }: ClassroomManagerC
                 ) : (
                   <Translate fil="Ipadala ang Babala ⚠️" en="Send Warning ⚠️" />
                 )}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Delete Classroom Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full border border-slate-200 shadow-2xl relative animate-scale-up">
+            
+            <button 
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-xl font-heading font-black text-slate-900 text-center mb-2">
+              <Translate fil="Burahin ang Silid-aralan?" en="Delete Classroom?" />
+            </h3>
+
+            <p className="text-slate-600 text-sm font-medium text-center leading-relaxed mb-6">
+              <Translate 
+                fil={`Sigurado ka bang nais mong burahin ang "${classroom.name}"? Mabubura ang lahat ng nakatala ritong mag-aaral, pagsusulit, at live session.`} 
+                en={`Are you sure you want to delete "${classroom.name}"? All enrolled students, quizzes, and live sessions in this room will be permanently removed.`} 
+              />
+            </p>
+
+            <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-full text-sm cursor-pointer"
+              >
+                <Translate fil="Kanselahin" en="Cancel" />
+              </button>
+              
+              <button
+                type="button"
+                onClick={handleDeleteClassroom}
+                disabled={isPending}
+                className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 font-extrabold rounded-full text-sm text-white shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                <Translate fil="Oo, Burahin Na" en="Yes, Delete Now" />
               </button>
             </div>
 

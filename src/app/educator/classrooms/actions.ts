@@ -1,4 +1,4 @@
-﻿'use server'
+'use server'
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
@@ -250,5 +250,41 @@ export async function giveStudentWarning(classroomId: string, studentId: string,
   }
 
   revalidatePath(`/educator/classrooms/${classroomId}`)
+  return { success: true }
+}
+
+export async function deleteClassroom(classroomId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Kailangan munang mag-sign in.' }
+  }
+
+  // Verify ownership
+  const { data: classroom } = await supabase
+    .from('classrooms')
+    .select('id, name')
+    .eq('id', classroomId)
+    .eq('educator_id', user.id)
+    .single()
+
+  if (!classroom) {
+    return { error: 'Hindi nahanap ang silid-aralan o wala kang pahintulot.' }
+  }
+
+  const { error: deleteError } = await supabase
+    .from('classrooms')
+    .delete()
+    .eq('id', classroomId)
+    .eq('educator_id', user.id)
+
+  if (deleteError) {
+    console.error('Error deleting classroom:', deleteError)
+    return { error: 'Hindi mabura ang silid-aralan: ' + deleteError.message }
+  }
+
+  revalidatePath('/educator/classrooms')
+  revalidatePath('/educator')
   return { success: true }
 }

@@ -47,21 +47,27 @@ export function useLiveSession(sessionId: string, initialSession?: LiveSession |
       }
 
       setError(null)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching live session data:', err)
-      setError(err?.message || 'Failed to load session')
+      const message = err instanceof Error ? err.message : 'Failed to load session'
+      setError(message)
     } finally {
       setLoading(false)
     }
   }, [sessionId, supabase])
 
-  // Initial load
+  // Initial load & Realtime Subscriptions
   useEffect(() => {
-    refreshData()
-  }, [refreshData])
+    let isMounted = true
 
-  // Realtime Subscriptions
-  useEffect(() => {
+    const loadInitial = async () => {
+      if (isMounted) {
+        await refreshData()
+      }
+    }
+
+    loadInitial()
+
     const channel = supabase.channel(`live-session-${sessionId}`)
 
     channel
@@ -112,12 +118,12 @@ export function useLiveSession(sessionId: string, initialSession?: LiveSession |
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          // Re-sync on subscription connect/reconnect
           refreshData()
         }
       })
 
     return () => {
+      isMounted = false
       supabase.removeChannel(channel)
     }
   }, [sessionId, supabase, refreshData])
@@ -143,7 +149,7 @@ export function useLiveSession(sessionId: string, initialSession?: LiveSession |
       selfHealTimerRef.current = setTimeout(async () => {
         try {
           await supabase.rpc('advance_question', { p_session_id: sessionId })
-        } catch (err) {
+        } catch {
           // Ignore error if already advanced by host
         }
       }, delay)

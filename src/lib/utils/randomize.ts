@@ -28,18 +28,19 @@ function stringToSeed(str: string): number {
 /**
  * Normalizes raw choices (array of strings or object choices) into LiveSessionQuestionChoice[]
  */
-export function normalizeChoices(choices: any): LiveSessionQuestionChoice[] {
+export function normalizeChoices(choices: unknown): LiveSessionQuestionChoice[] {
   if (!choices) return []
   
   if (Array.isArray(choices)) {
-    return choices.map((c, index) => {
+    return choices.map((c: unknown, index: number) => {
       if (typeof c === 'string') {
         return { id: String(index), text: c }
       }
       if (typeof c === 'object' && c !== null) {
+        const obj = c as Record<string, unknown>
         return {
-          id: String(c.id !== undefined ? c.id : index),
-          text: String(c.text || c.label || c.option || '')
+          id: String(obj.id !== undefined ? obj.id : index),
+          text: String(obj.text || obj.label || obj.option || '')
         }
       }
       return { id: String(index), text: String(c) }

@@ -39,13 +39,19 @@ export function useLeaderVote(sessionId: string, groupId: string | null, student
     }
   }, [sessionId, groupId, studentId, supabase])
 
-  useEffect(() => {
-    refreshVotes()
-  }, [refreshVotes])
-
   // Realtime subscription for votes
   useEffect(() => {
     if (!sessionId || !groupId) return
+
+    let isMounted = true
+
+    const loadInitial = async () => {
+      if (isMounted) {
+        await refreshVotes()
+      }
+    }
+
+    loadInitial()
 
     const channel = supabase.channel(`votes-${sessionId}-${groupId}`)
 
@@ -65,6 +71,7 @@ export function useLeaderVote(sessionId: string, groupId: string | null, student
       .subscribe()
 
     return () => {
+      isMounted = false
       supabase.removeChannel(channel)
     }
   }, [sessionId, groupId, supabase, refreshVotes])

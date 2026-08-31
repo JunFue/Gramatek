@@ -16,7 +16,7 @@ export async function joinClassroom(formData: FormData) {
   const { data: classroom, error: classroomError } = await supabase
     .from('classrooms')
     .select('id, enrollment_limit')
-    .eq('enrollment_code', code.toUpperCase())
+    .eq('enrollment_code', code.trim().toUpperCase())
     .single()
 
   if (classroomError || !classroom) {
@@ -32,7 +32,7 @@ export async function joinClassroom(formData: FormData) {
     .single()
 
   if (existingMember) {
-    return { error: 'You are already in this classroom' }
+    return { success: true, classroomId: classroom.id }
   }
 
   // 3. Check limit
@@ -56,5 +56,6 @@ export async function joinClassroom(formData: FormData) {
   if (joinError) return { error: 'Failed to join classroom' }
 
   revalidatePath('/student')
-  return { success: true }
+  revalidatePath(`/student/classrooms/${classroom.id}`)
+  return { success: true, classroomId: classroom.id }
 }

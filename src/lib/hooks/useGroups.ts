@@ -54,12 +54,18 @@ export function useGroups(sessionId: string) {
     }
   }, [sessionId, supabase])
 
-  useEffect(() => {
-    refreshGroups()
-  }, [refreshGroups])
-
   // Realtime subscriptions
   useEffect(() => {
+    let isMounted = true
+
+    const loadInitial = async () => {
+      if (isMounted) {
+        await refreshGroups()
+      }
+    }
+
+    loadInitial()
+
     const channel = supabase.channel(`groups-${sessionId}`)
 
     channel
@@ -90,6 +96,7 @@ export function useGroups(sessionId: string) {
       .subscribe()
 
     return () => {
+      isMounted = false
       supabase.removeChannel(channel)
     }
   }, [sessionId, supabase, refreshGroups])
