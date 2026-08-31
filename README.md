@@ -66,3 +66,24 @@ To keep DB size under the 500MB free-tier cap indefinitely:
 - Periodically archive or delete `live_sessions` (and cascaded `live_session_questions`, `live_session_participants`, `live_session_groups`, `live_session_answers`) older than 90 days where `status = 'ended'`.
 - Standings & accuracy summaries can be exported client-side to CSV by educators after each session.
 
+---
+
+## 🤖 Gemini AI Question Generator Configuration
+
+Gramatek includes an AI-powered Question Generator that allows teachers to create high-quality Filipino grammar and vocabulary cards on the fly using **Google Gemini 2.5 Flash**.
+
+### Supported Generation Modes:
+1. **Prompt & Topic Generation**: Enter any Filipino grammar topic (e.g. *"Pandiwa at Aspekto"*, *"Wastong Gamit ng ng at nang"*), target grade level, question count, and types (Multiple Choice / Fill in the Blank).
+2. **PDF Q&A Extraction**: Upload a question sheet PDF containing existing questions and answers, and Gemini will automatically extract, parse, and structure them into valid cards.
+3. **PDF Lesson to Quiz**: Upload a lesson module, story, or reading passage PDF, and Gemini will analyze the text to generate curriculum-aligned questions.
+
+### How to Configure Gemini API Key:
+1. Obtain a free Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+2. Open your local `.env.local` file (or copy `.env.example` to `.env.local`).
+3. Add your key:
+   ```env
+   GEMINI_API_KEY=your_actual_gemini_api_key_here
+   ```
+4. Restart your development server (`npm run dev`).
+
+

@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { SetupWizardClient } from './SetupWizardClient'
-import { PREBUILT_QUIZZES } from '@/lib/data/filipino-trivia'
 
 export default async function LiveSessionSetupPage({
   params,
@@ -31,12 +30,16 @@ export default async function LiveSessionSetupPage({
     notFound()
   }
 
-  // 2. Fetch all Quiz Cards from quizzes in this classroom
+  // 2. Fetch all Quizzes and Drafts created by this educator
   const { data: quizzes } = await supabase
     .from('quizzes')
     .select(`
       id,
       title,
+      description,
+      is_published,
+      classroom_id,
+      classrooms ( name ),
       cards:quiz_cards (
         id,
         question_text,
@@ -47,62 +50,35 @@ export default async function LiveSessionSetupPage({
         order_index
       )
     `)
-    .eq('classroom_id', classroomId)
+    .eq('educator_id', user.id)
     .order('created_at', { ascending: false })
 
-  // Transform available cards
-  const availableCards: Array<{
-    id: string
-    quiz_title: string
-    question_text: string
-    options: any
-    correct_answer: any
-    time_limit?: number | null
-  }> = []
-
-  quizzes?.forEach((quiz) => {
-    quiz.cards?.forEach((card: any) => {
-      availableCards.push({
-        id: card.id,
-        quiz_title: quiz.title,
-        question_text: card.question_text,
-        options: card.options,
-        correct_answer: card.correct_answer,
-        time_limit: card.time_limit_override
-      })
-    })
-  })
-
-  // Also include pre-built trivia cards for easy instant testing/selection
-  const prebuiltCards: Array<{
-    id: string
-    quiz_title: string
-    question_text: string
-    options: any
-    correct_answer: any
-    time_limit?: number | null
-  }> = []
-
-  PREBUILT_QUIZZES.forEach((quiz) => {
-    quiz.cards.forEach((card) => {
-      prebuiltCards.push({
-        id: card.id,
-        quiz_title: quiz.title,
-        question_text: card.question_text,
-        options: card.options || [],
-        correct_answer: card.correct_answer,
-        time_limit: card.points ? quiz.time_limit_seconds : null
-      })
-    })
-  })
+  // Transform available drafts
+  const availableDrafts = (quizzes || []).map((quiz: any) => ({
+    id: quiz.id,
+    title: quiz.title,
+    description: quiz.description,
+    is_published: quiz.is_published,
+    classroom_id: quiz.classroom_id,
+    classroom_name: quiz.classrooms?.name || 'Ibang Silid',
+    cards: (quiz.cards || []).map((card: any) => ({
+      id: card.id,
+      quiz_id: quiz.id,
+      quiz_title: quiz.title,
+      question_text: card.question_text,
+      question_type: card.question_type || 'multiple_choice',
+      options: card.options || [],
+      correct_answer: card.correct_answer,
+      time_limit: card.time_limit_override || null
+    }))
+  }))
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto animate-fade-in">
       <SetupWizardClient
         classroomId={classroomId}
         classroomName={classroom.name}
-        availableCards={availableCards}
-        prebuiltCards={prebuiltCards}
+        availableDrafts={availableDrafts}
         duplicateFromId={duplicate_from}
       />
     </div>

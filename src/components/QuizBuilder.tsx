@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { Translate } from '@/components/Translate'
+import { AIQuestionGeneratorModal, GeneratedCard } from '@/components/AIQuestionGeneratorModal'
 
 type QuestionType = 'multiple_choice' | 'fill_blank' | 'enumeration'
 type GameMode = 'mastery' | 'scheduled' | 'survival'
@@ -113,6 +114,20 @@ export function QuizBuilder({
   )
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false)
+
+  const handleAddAICards = (aiCards: GeneratedCard[]) => {
+    const newCards: CardData[] = aiCards.map((c) => ({
+      id: c.id || Math.random().toString(36).substr(2, 9),
+      type: (c.question_type as QuestionType) || 'multiple_choice',
+      text: c.question_text,
+      options: c.options || (c.question_type === 'multiple_choice' ? ['', '', '', ''] : undefined),
+      correctAnswer: c.correct_answer,
+      timeLimitOverride: c.time_limit || null
+    }))
+
+    setCards((prev) => [...prev, ...newCards])
+  }
 
   const addCard = (type: QuestionType) => {
     const newCard: CardData = {
@@ -608,9 +623,20 @@ export function QuizBuilder({
 
       {/* ── Cards (Questions) ── */}
       <div className="space-y-6">
-        <h2 className="text-2xl font-heading font-black text-slate-900 flex items-center justify-between">
-          <span><Translate fil="Mga Card ng Pagsusulit" en="Deck Cards" /> ({cards.length})</span>
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 className="text-2xl font-heading font-black text-slate-900">
+            <Translate fil="Mga Card ng Pagsusulit" en="Deck Cards" /> ({cards.length})
+          </h2>
+
+          <button
+            type="button"
+            onClick={() => setIsAIModalOpen(true)}
+            className="px-4 py-2 bg-linear-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black rounded-xl text-xs md:text-sm shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 self-start sm:self-auto"
+          >
+            <Sparkles className="w-4 h-4 text-slate-950" />
+            <span><Translate fil="Bumuo gamit ang AI (Gemini)" en="Generate with AI (Gemini)" /> ✨</span>
+          </button>
+        </div>
 
         {cards.map((card, index) => (
           <div key={card.id} className="bg-white rounded-xl p-6 relative group border border-slate-200 animate-slide-up shadow-sm">
@@ -715,31 +741,43 @@ export function QuizBuilder({
         ))}
 
         {/* Add Card Menu */}
-        <div className="bg-slate-50 rounded-xl p-4 border border-dashed border-slate-300 flex flex-col md:flex-row items-center justify-center gap-4 shadow-sm">
-           <span className="text-sm font-bold text-slate-500"><Translate fil="Magdagdag ng card:" en="Add new card:" /></span>
-           <button 
-             type="button"
-             onClick={() => addCard('multiple_choice')} 
-             className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-           >
-             <Plus className="w-4 h-4" /> <Translate fil="Pagpipilian" en="Multiple Choice" />
-           </button>
-           <button 
-             type="button"
-             onClick={() => addCard('fill_blank')} 
-             className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-           >
-             <Plus className="w-4 h-4" /> <Translate fil="Punan ang Patlang" en="Fill in the Blank" />
-           </button>
-           <button 
-             type="button"
-             onClick={() => alert("Enumeration coming soon")} 
-             className="px-4 py-2 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-           >
-             <Plus className="w-4 h-4" /> <Translate fil="Enumerasyon" en="Enumeration" />
-           </button>
+        <div className="bg-slate-50 rounded-2xl p-5 border border-dashed border-slate-300 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500"><Translate fil="Magdagdag ng card:" en="Add new card:" /></span>
+            <button 
+              type="button"
+              onClick={() => addCard('multiple_choice')} 
+              className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" /> <Translate fil="Pagpipilian" en="Multiple Choice" />
+            </button>
+            <button 
+              type="button"
+              onClick={() => addCard('fill_blank')} 
+              className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" /> <Translate fil="Punan ang Patlang" en="Fill in the Blank" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsAIModalOpen(true)}
+            className="px-5 py-2.5 bg-linear-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
+          >
+            <Sparkles className="w-4 h-4 text-slate-950" />
+            <Translate fil="Bumuo gamit ang AI (Gemini)" en="Generate with AI (Gemini)" /> ✨
+          </button>
         </div>
       </div>
+
+      {/* AI Question Generator Modal */}
+      <AIQuestionGeneratorModal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
+        onAddCards={handleAddAICards}
+      />
+
     </div>
   )
 }
