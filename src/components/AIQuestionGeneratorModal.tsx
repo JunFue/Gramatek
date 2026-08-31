@@ -3,20 +3,29 @@
 import { useState, useRef } from 'react'
 import { 
   Sparkles, FileText, Upload, X, Loader2, CheckCircle2, 
-  AlertCircle, ArrowRight, BookOpen, Layers, Edit3, Trash2,
-  Check, Clock, Key
+  AlertCircle, BookOpen, Layers, Check, Key, Plus, Minus,
+  RotateCcw, Sliders, CheckSquare, Zap
 } from 'lucide-react'
 import { Translate } from '@/components/Translate'
 
 export interface GeneratedCard {
   id: string
   question_text: string
-  question_type: 'multiple_choice' | 'fill_blank' | 'enumeration'
+  question_type: 'multiple_choice' | 'fill_blank' | 'enumeration' | 'word_scramble' | 'true_false' | 'sentence_scramble'
   options?: string[]
   correct_answer: any
   time_limit?: number | null
   explanation?: string | null
 }
+
+const CARD_TYPES_METADATA = [
+  { id: 'multiple_choice', name: 'Multiple Choice', desc: '4 Pagpipilian', color: 'border-blue-200 bg-blue-50/50 text-blue-900', badge: 'bg-blue-100 text-blue-800' },
+  { id: 'fill_blank', name: 'Punan ang Patlang', desc: 'May nawawalang salita (___)', color: 'border-indigo-200 bg-indigo-50/50 text-indigo-900', badge: 'bg-indigo-100 text-indigo-800' },
+  { id: 'enumeration', name: 'Enumerasyon', desc: 'Listahan ng mga aytem', color: 'border-emerald-200 bg-emerald-50/50 text-emerald-900', badge: 'bg-emerald-100 text-emerald-800' },
+  { id: 'word_scramble', name: 'Word Scramble', desc: 'Nagulong mga titik', color: 'border-amber-200 bg-amber-50/50 text-amber-900', badge: 'bg-amber-100 text-amber-800' },
+  { id: 'true_false', name: 'Tama o Mali', desc: 'TAMA / MALI buttons', color: 'border-rose-200 bg-rose-50/50 text-rose-900', badge: 'bg-rose-100 text-rose-800' },
+  { id: 'sentence_scramble', name: 'Ayusin ang Pangungusap', desc: 'Nagulong mga salita', color: 'border-purple-200 bg-purple-50/50 text-purple-900', badge: 'bg-purple-100 text-purple-800' }
+]
 
 interface AIQuestionGeneratorModalProps {
   isOpen: boolean
@@ -34,12 +43,21 @@ export function AIQuestionGeneratorModal({
   // Prompt form state
   const [topic, setTopic] = useState('')
   const [gradeLevel, setGradeLevel] = useState('Baitang 4-6 (Grade 4-6)')
-  const [count, setCount] = useState(5)
-  const [questionType, setQuestionType] = useState<'multiple_choice' | 'fill_blank' | 'both'>('multiple_choice')
   const [promptText, setPromptText] = useState('')
 
+  // Per-type count breakdown (for Prompt & Lesson PDF)
+  const [typeCounts, setTypeCounts] = useState<Record<string, number>>({
+    multiple_choice: 3,
+    fill_blank: 2,
+    enumeration: 0,
+    word_scramble: 0,
+    true_false: 2,
+    sentence_scramble: 0
+  })
+
   // PDF form state
-  const [pdfMode, setPdfMode] = useState<'extract_pdf' | 'lesson_pdf'>('lesson_pdf')
+  const [pdfMode, setPdfMode] = useState<'extract_pdf' | 'lesson_pdf'>('extract_pdf')
+  const [pdfCount, setPdfCount] = useState(100)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -49,9 +67,39 @@ export function AIQuestionGeneratorModal({
   const [missingApiKey, setMissingApiKey] = useState(false)
   const [generatedCards, setGeneratedCards] = useState<GeneratedCard[]>([])
   const [selectedCardIds, setSelectedCardIds] = useState<Record<string, boolean>>({})
-  const [editingCardIndex, setEditingCardIndex] = useState<number | null>(null)
 
   if (!isOpen) return null
+
+  const totalCalculatedQuestions = Object.values(typeCounts).reduce((acc, curr) => acc + (Number(curr) || 0), 0)
+
+  const updateTypeCount = (typeId: string, delta: number) => {
+    setTypeCounts((prev) => {
+      const current = prev[typeId] || 0
+      const next = Math.max(0, Math.min(50, current + delta))
+      return { ...prev, [typeId]: next }
+    })
+  }
+
+  const setDirectTypeCount = (typeId: string, val: number) => {
+    setTypeCounts((prev) => ({
+      ...prev,
+      [typeId]: Math.max(0, Math.min(50, val || 0))
+    }))
+  }
+
+  const applyPreset = (preset: 'mcq5' | 'tf5' | 'mixed' | 'all1' | 'clear') => {
+    if (preset === 'mcq5') {
+      setTypeCounts({ multiple_choice: 5, fill_blank: 0, enumeration: 0, word_scramble: 0, true_false: 0, sentence_scramble: 0 })
+    } else if (preset === 'tf5') {
+      setTypeCounts({ multiple_choice: 0, fill_blank: 0, enumeration: 0, word_scramble: 0, true_false: 5, sentence_scramble: 0 })
+    } else if (preset === 'mixed') {
+      setTypeCounts({ multiple_choice: 2, fill_blank: 2, enumeration: 1, word_scramble: 2, true_false: 2, sentence_scramble: 1 })
+    } else if (preset === 'all1') {
+      setTypeCounts({ multiple_choice: 1, fill_blank: 1, enumeration: 1, word_scramble: 1, true_false: 1, sentence_scramble: 1 })
+    } else if (preset === 'clear') {
+      setTypeCounts({ multiple_choice: 0, fill_blank: 0, enumeration: 0, word_scramble: 0, true_false: 0, sentence_scramble: 0 })
+    }
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -83,6 +131,14 @@ export function AIQuestionGeneratorModal({
       return
     }
 
+    // Check count for prompt or lesson_pdf
+    if (activeTab === 'prompt' || (activeTab === 'pdf' && pdfMode === 'lesson_pdf')) {
+      if (totalCalculatedQuestions === 0) {
+        setError('Pumili ng kahit isang tanong sa alinmang uri ng kard bago magpatuloy.')
+        return
+      }
+    }
+
     setIsGenerating(true)
 
     try {
@@ -90,9 +146,15 @@ export function AIQuestionGeneratorModal({
       formData.append('mode', activeTab === 'pdf' ? pdfMode : 'prompt')
       formData.append('topic', topic)
       formData.append('gradeLevel', gradeLevel)
-      formData.append('count', String(count))
-      formData.append('questionType', questionType)
       formData.append('prompt', promptText)
+
+      if (activeTab === 'prompt' || (activeTab === 'pdf' && pdfMode === 'lesson_pdf')) {
+        formData.append('typeCounts', JSON.stringify(typeCounts))
+        formData.append('count', String(totalCalculatedQuestions))
+      } else {
+        // extract_pdf mode: auto-detect with total question limit
+        formData.append('count', String(pdfCount))
+      }
 
       if (activeTab === 'pdf' && selectedFile) {
         formData.append('file', selectedFile)
@@ -112,7 +174,11 @@ export function AIQuestionGeneratorModal({
         throw new Error(data.error || 'Nabigo sa pagbuo ng mga tanong gamit ang AI.')
       }
 
-      const cards: GeneratedCard[] = data.cards || []
+      const cards: GeneratedCard[] = (data.cards || []).map((c: any) => ({
+        ...c,
+        time_limit: null
+      }))
+      
       setGeneratedCards(cards)
       
       // Auto select all generated cards
@@ -177,13 +243,13 @@ export function AIQuestionGeneratorModal({
             <h2 className="text-xl md:text-2xl font-heading font-black text-slate-900 flex items-center gap-2">
               <Translate fil="AI Question Generator" en="AI Question Generator" />
               <span className="px-2 py-0.5 text-[10px] uppercase font-black bg-amber-100 text-amber-900 rounded-full">
-                Gemini 2.5
+                Gemini 3.6 Flash
               </span>
             </h2>
             <p className="text-slate-500 text-xs md:text-sm font-medium">
               <Translate 
-                fil="Bumuo ng mga pagsusulit mula sa paksa o mag-upload ng PDF aralin / question sheet." 
-                en="Generate quiz cards from a prompt topic or uploaded lesson PDF / Q&A sheet." 
+                fil="Bumuo ng plain draft cards sa 6 na uri gamit ang prompt o PDF na may auto-detection at custom breakdown." 
+                en="Generate plain draft cards in 6 types via prompt or PDF with auto-detection and custom breakdown." 
               />
             </p>
           </div>
@@ -213,7 +279,7 @@ export function AIQuestionGeneratorModal({
           </div>
         )}
 
-        {/* VIEW 1: FORM INPUT (When not showing generated results) */}
+        {/* VIEW 1: FORM INPUT */}
         {generatedCards.length === 0 ? (
           <div className="flex-1 overflow-y-auto pr-1 space-y-6">
             
@@ -242,13 +308,13 @@ export function AIQuestionGeneratorModal({
                 }`}
               >
                 <FileText className="w-4 h-4 text-brand-primary" />
-                <Translate fil="Mag-upload ng PDF" en="Upload PDF" />
+                <Translate fil="Mag-upload ng PDF (Hanggang 100)" en="Upload PDF (Up to 100)" />
               </button>
             </div>
 
             {/* TAB 1: PROMPT / TOPIC FORM */}
             {activeTab === 'prompt' && (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div>
                   <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
                     <Translate fil="Paksa ng Pagsusulit" en="Quiz Topic" /> *
@@ -262,64 +328,126 @@ export function AIQuestionGeneratorModal({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                      <Translate fil="Baitang / Antas" en="Grade Level" />
-                    </label>
-                    <select
-                      value={gradeLevel}
-                      onChange={(e) => setGradeLevel(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all outline-hidden"
-                    >
-                      <option value="Baitang 1-3 (Grade 1-3)">Baitang 1-3 (Primary / Mababa)</option>
-                      <option value="Baitang 4-6 (Grade 4-6)">Baitang 4-6 (Intermediate / Gitna)</option>
-                      <option value="Junior High School (Grade 7-10)">Junior High School (Baitang 7-10)</option>
-                      <option value="Senior High School / Kolehiyo">Senior High School / Kolehiyo</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                      <Translate fil="Bilang ng Tanong" en="Question Count" />
-                    </label>
-                    <select
-                      value={count}
-                      onChange={(e) => setCount(parseInt(e.target.value, 10))}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all outline-hidden"
-                    >
-                      <option value={3}>3 Tanong</option>
-                      <option value={5}>5 Tanong</option>
-                      <option value={10}>10 Tanong</option>
-                      <option value={15}>15 Tanong</option>
-                      <option value={20}>20 Tanong</option>
-                    </select>
-                  </div>
-                </div>
-
                 <div>
                   <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                    <Translate fil="Uri ng Tanong" en="Question Type" />
+                    <Translate fil="Baitang / Antas" en="Grade Level" />
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'multiple_choice', label: 'Multiple Choice (4 Opsyon)' },
-                      { id: 'fill_blank', label: 'Punan ang Patlang' },
-                      { id: 'both', label: 'Kumbinasyon' }
-                    ].map((type) => (
-                      <button
-                        key={type.id}
-                        type="button"
-                        onClick={() => setQuestionType(type.id as any)}
-                        className={`p-3 rounded-2xl text-xs font-extrabold border transition-all text-center cursor-pointer ${
-                          questionType === type.id
-                            ? 'bg-amber-50 border-amber-400 text-amber-950 shadow-xs'
-                            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                        }`}
-                      >
-                        {type.label}
-                      </button>
-                    ))}
+                  <select
+                    value={gradeLevel}
+                    onChange={(e) => setGradeLevel(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all outline-hidden"
+                  >
+                    <option value="Baitang 1-3 (Grade 1-3)">Baitang 1-3 (Primary / Mababa)</option>
+                    <option value="Baitang 4-6 (Grade 4-6)">Baitang 4-6 (Intermediate / Gitna)</option>
+                    <option value="Junior High School (Grade 7-10)">Junior High School (Baitang 7-10)</option>
+                    <option value="Senior High School / Kolehiyo">Senior High School / Kolehiyo</option>
+                  </select>
+                </div>
+
+                {/* Card Type Breakdown Configurator */}
+                <div className="space-y-3 bg-slate-50 p-4 rounded-3xl border border-slate-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                        <Sliders className="w-4 h-4 text-brand-primary" />
+                        <Translate fil="I-configure ang Dami ng Bawat Uri ng Kard" en="Configure Quantity per Card Type" />
+                      </h4>
+                      <p className="text-[11px] text-slate-500 font-medium">Itakda kung ilang tanong ang nais mong buuin para sa bawat uri.</p>
+                    </div>
+
+                    <div className="px-3 py-1 bg-amber-100 text-amber-950 font-black text-xs rounded-xl self-start sm:self-auto border border-amber-300">
+                      Kabuoan: {totalCalculatedQuestions} Tanong
+                    </div>
+                  </div>
+
+                  {/* Quick Presets */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    <span className="text-[10px] font-bold text-slate-500 self-center">Presets:</span>
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('mcq5')}
+                      className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700 cursor-pointer"
+                    >
+                      5 Multiple Choice
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('tf5')}
+                      className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700 cursor-pointer"
+                    >
+                      5 Tama o Mali
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('mixed')}
+                      className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg text-[11px] font-black text-amber-900 cursor-pointer"
+                    >
+                      ✨ Halo-halo (10 Tanong)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('all1')}
+                      className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700 cursor-pointer"
+                    >
+                      1 Bawat Uri (6 Tanong)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('clear')}
+                      className="px-2 py-1 text-[11px] font-bold text-slate-400 hover:text-rose-600 cursor-pointer ml-auto"
+                    >
+                      I-reset
+                    </button>
+                  </div>
+
+                  {/* 6 Type Counters */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                    {CARD_TYPES_METADATA.map((meta) => {
+                      const count = typeCounts[meta.id] || 0
+
+                      return (
+                        <div
+                          key={meta.id}
+                          className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                            count > 0 ? 'bg-white border-slate-300 shadow-xs' : 'bg-slate-100/60 border-slate-200 opacity-60'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-xs font-black text-slate-900 truncate">{meta.name}</p>
+                            <p className="text-[10px] text-slate-500 font-medium truncate">{meta.desc}</p>
+                          </div>
+
+                          {/* Stepper */}
+                          <div className="flex items-center gap-1.5 shrink-0 bg-slate-50 border border-slate-200 rounded-xl p-1">
+                            <button
+                              type="button"
+                              onClick={() => updateTypeCount(meta.id, -1)}
+                              disabled={count === 0}
+                              className="w-6 h-6 rounded-lg bg-white hover:bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs disabled:opacity-30 cursor-pointer shadow-2xs"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+
+                            <input
+                              type="number"
+                              min={0}
+                              max={50}
+                              value={count}
+                              onChange={(e) => setDirectTypeCount(meta.id, parseInt(e.target.value, 10))}
+                              className="w-8 text-center text-xs font-black text-slate-900 bg-transparent focus:outline-none"
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => updateTypeCount(meta.id, 1)}
+                              className="w-6 h-6 rounded-lg bg-white hover:bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs cursor-pointer shadow-2xs"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
 
@@ -340,35 +468,40 @@ export function AIQuestionGeneratorModal({
 
             {/* TAB 2: PDF UPLOAD FORM */}
             {activeTab === 'pdf' && (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {/* PDF Mode selector */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setPdfMode('lesson_pdf')}
-                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
-                      pdfMode === 'lesson_pdf'
-                        ? 'bg-brand-light/30 border-brand-primary text-slate-900 shadow-sm'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    <BookOpen className="w-5 h-5 text-brand-primary mb-1.5" />
-                    <p className="font-extrabold text-xs text-slate-900">Aralin / Module PDF</p>
-                    <p className="text-[11px] text-slate-500 font-medium">Bumuo ng mga bagong tanong batay sa nilalaman ng aralin o kwento.</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPdfMode('extract_pdf')}
+                    onClick={() => {
+                      setPdfMode('extract_pdf')
+                      setPdfCount(100)
+                    }}
                     className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                       pdfMode === 'extract_pdf'
-                        ? 'bg-brand-light/30 border-brand-primary text-slate-900 shadow-sm'
+                        ? 'bg-brand-light/30 border-brand-primary text-slate-900 shadow-sm ring-1 ring-brand-primary/20'
                         : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                     }`}
                   >
                     <Layers className="w-5 h-5 text-brand-primary mb-1.5" />
-                    <p className="font-extrabold text-xs text-slate-900">Question Sheet PDF</p>
-                    <p className="text-[11px] text-slate-500 font-medium">I-extract at isaayos ang mga nakasulat na tanong at sagot mula sa PDF.</p>
+                    <p className="font-extrabold text-xs text-slate-900">Question Sheet / Reviewer PDF</p>
+                    <p className="text-[11px] text-slate-500 font-medium">Awtomatikong tutukuyin (Auto-detect) ang uri ng bawat tanong mula sa PDF.</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPdfMode('lesson_pdf')
+                    }}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                      pdfMode === 'lesson_pdf'
+                        ? 'bg-brand-light/30 border-brand-primary text-slate-900 shadow-sm ring-1 ring-brand-primary/20'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <BookOpen className="w-5 h-5 text-brand-primary mb-1.5" />
+                    <p className="font-extrabold text-xs text-slate-900">Aralin / Kwento / Module PDF</p>
+                    <p className="text-[11px] text-slate-500 font-medium">I-configure ang dami ng bawat uri ng kard na bubuuin mula sa aralin.</p>
                   </button>
                 </div>
 
@@ -404,39 +537,149 @@ export function AIQuestionGeneratorModal({
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                      <Translate fil="Target na Bilang ng Tanong" en="Question Count" />
-                    </label>
-                    <select
-                      value={count}
-                      onChange={(e) => setCount(parseInt(e.target.value, 10))}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-brand-primary focus:bg-white transition-all outline-hidden"
-                    >
-                      <option value={3}>3 Tanong</option>
-                      <option value={5}>5 Tanong</option>
-                      <option value={10}>10 Tanong</option>
-                      <option value={15}>15 Tanong</option>
-                    </select>
-                  </div>
+                {/* PDF MODE 1: AUTO-DETECT FOR QUESTION SHEET */}
+                {pdfMode === 'extract_pdf' && (
+                  <div className="space-y-4">
+                    <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex items-start gap-2.5 text-xs font-semibold">
+                      <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-black text-amber-950">✨ Awtomatikong Tutukuyin ng AI ang Uri ng Kard</p>
+                        <p className="text-[11px] text-amber-900/90 font-medium mt-0.5">
+                          Awtomatikong susuriin ng Gemini ang bawat tanong sa iyong PDF at ikaklasipika ito bilang Multiple Choice, Punan ang Patlang, Enumerasyon, Word Scramble, Tama o Mali, o Ayusin ang Pangungusap batay sa mismong pormat nito.
+                        </p>
+                      </div>
+                    </div>
 
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                      <Translate fil="Antas / Baitang" en="Grade Level" />
-                    </label>
-                    <select
-                      value={gradeLevel}
-                      onChange={(e) => setGradeLevel(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-brand-primary focus:bg-white transition-all outline-hidden"
-                    >
-                      <option value="Baitang 1-3">Baitang 1-3</option>
-                      <option value="Baitang 4-6">Baitang 4-6</option>
-                      <option value="Junior High School">Junior High School</option>
-                      <option value="Senior High School">Senior High School</option>
-                    </select>
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
+                        <Translate fil="Limitasyon sa Bilang ng Tanong" en="Question Count Limit" />
+                      </label>
+                      <select
+                        value={pdfCount}
+                        onChange={(e) => setPdfCount(parseInt(e.target.value, 10))}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-brand-primary focus:bg-white transition-all outline-hidden"
+                      >
+                        <option value={100}>Lahat ng Tanong sa PDF (Hanggang 100 Tanong)</option>
+                        <option value={75}>Hanggang 75 Tanong</option>
+                        <option value={50}>Hanggang 50 Tanong</option>
+                        <option value={30}>Hanggang 30 Tanong</option>
+                        <option value={20}>Hanggang 20 Tanong</option>
+                        <option value={10}>Hanggang 10 Tanong</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* PDF MODE 2: PER-TYPE CONFIGURATOR FOR LESSON MATERIAL */}
+                {pdfMode === 'lesson_pdf' && (
+                  <div className="space-y-4">
+                    <div className="space-y-3 bg-slate-50 p-4 rounded-3xl border border-slate-200">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                            <Sliders className="w-4 h-4 text-brand-primary" />
+                            <Translate fil="Dami ng Bawat Uri ng Kard mula sa Aralin" en="Quantity per Card Type from Lesson" />
+                          </h4>
+                          <p className="text-[11px] text-slate-500 font-medium">Itakda kung ilang tanong ang bubuuin ng AI batay sa nilalaman ng PDF.</p>
+                        </div>
+
+                        <div className="px-3 py-1 bg-amber-100 text-amber-950 font-black text-xs rounded-xl self-start sm:self-auto border border-amber-300">
+                          Kabuoan: {totalCalculatedQuestions} Tanong
+                        </div>
+                      </div>
+
+                      {/* Quick Presets */}
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        <span className="text-[10px] font-bold text-slate-500 self-center">Presets:</span>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('mcq5')}
+                          className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700 cursor-pointer"
+                        >
+                          5 Multiple Choice
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('tf5')}
+                          className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700 cursor-pointer"
+                        >
+                          5 Tama o Mali
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('mixed')}
+                          className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg text-[11px] font-black text-amber-900 cursor-pointer"
+                        >
+                          ✨ Halo-halo (10 Tanong)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('all1')}
+                          className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700 cursor-pointer"
+                        >
+                          1 Bawat Uri (6 Tanong)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('clear')}
+                          className="px-2 py-1 text-[11px] font-bold text-slate-400 hover:text-rose-600 cursor-pointer ml-auto"
+                        >
+                          I-reset
+                        </button>
+                      </div>
+
+                      {/* 6 Type Counters */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                        {CARD_TYPES_METADATA.map((meta) => {
+                          const count = typeCounts[meta.id] || 0
+
+                          return (
+                            <div
+                              key={meta.id}
+                              className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                                count > 0 ? 'bg-white border-slate-300 shadow-xs' : 'bg-slate-100/60 border-slate-200 opacity-60'
+                              }`}
+                            >
+                              <div className="min-w-0">
+                                <p className="text-xs font-black text-slate-900 truncate">{meta.name}</p>
+                                <p className="text-[10px] text-slate-500 font-medium truncate">{meta.desc}</p>
+                              </div>
+
+                              {/* Stepper */}
+                              <div className="flex items-center gap-1.5 shrink-0 bg-slate-50 border border-slate-200 rounded-xl p-1">
+                                <button
+                                  type="button"
+                                  onClick={() => updateTypeCount(meta.id, -1)}
+                                  disabled={count === 0}
+                                  className="w-6 h-6 rounded-lg bg-white hover:bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs disabled:opacity-30 cursor-pointer shadow-2xs"
+                                >
+                                  <Minus className="w-3 h-3" />
+                                </button>
+
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={50}
+                                  value={count}
+                                  onChange={(e) => setDirectTypeCount(meta.id, parseInt(e.target.value, 10))}
+                                  className="w-8 text-center text-xs font-black text-slate-900 bg-transparent focus:outline-none"
+                                />
+
+                                <button
+                                  type="button"
+                                  onClick={() => updateTypeCount(meta.id, 1)}
+                                  className="w-6 h-6 rounded-lg bg-white hover:bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs cursor-pointer shadow-2xs"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
@@ -446,7 +689,7 @@ export function AIQuestionGeneratorModal({
                     rows={2}
                     value={promptText}
                     onChange={(e) => setPromptText(e.target.value)}
-                    placeholder="hal. Magpokus sa kabanata 2 o sa talasalitaan..."
+                    placeholder="hal. Kunin ang lahat ng pagsusulit at gawing halo-halong uri..."
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-brand-primary focus:bg-white transition-all outline-hidden resize-none"
                   />
                 </div>
@@ -477,7 +720,11 @@ export function AIQuestionGeneratorModal({
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>Bumuo ng mga Kard Gamit ang AI ➔</span>
+                    <span>
+                      {activeTab === 'pdf' && pdfMode === 'extract_pdf' 
+                        ? 'I-extract at I-autodetect ang mga Kard ➔' 
+                        : `Bumuo ng ${totalCalculatedQuestions} Kard gamit ang AI ➔`}
+                    </span>
                   </>
                 )}
               </button>
@@ -538,19 +785,21 @@ export function AIQuestionGeneratorModal({
                             {idx + 1}
                           </span>
                           <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-slate-200 text-slate-700">
-                            {card.question_type === 'multiple_choice' ? 'Multiple Choice' : 'Punan ang Patlang'}
+                            {card.question_type === 'multiple_choice' && 'Multiple Choice'}
+                            {card.question_type === 'fill_blank' && 'Punan ang Patlang'}
+                            {card.question_type === 'enumeration' && 'Enumerasyon'}
+                            {card.question_type === 'word_scramble' && 'Word Scramble'}
+                            {card.question_type === 'true_false' && 'Tama o Mali'}
+                            {card.question_type === 'sentence_scramble' && 'Ayusin ang Pangungusap'}
                           </span>
-                          {card.time_limit && (
-                            <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-slate-400" />
-                              {card.time_limit}s
-                            </span>
-                          )}
+                          <span className="text-[10px] font-bold text-slate-400">
+                            Plain Draft Card (Walang Pre-set Timer)
+                          </span>
                         </div>
 
                         <p className="text-sm font-extrabold text-slate-900 mb-2">{card.question_text}</p>
 
-                        {/* Options if multiple choice */}
+                        {/* 1. Multiple choice preview */}
                         {card.question_type === 'multiple_choice' && card.options && (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                             {card.options.map((opt, oIdx) => {
@@ -573,10 +822,74 @@ export function AIQuestionGeneratorModal({
                           </div>
                         )}
 
-                        {/* Fill blank answer */}
+                        {/* 2. Fill blank preview */}
                         {card.question_type === 'fill_blank' && (
                           <div className="mt-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl inline-block border border-emerald-300">
                             Tamang Sagot: {card.correct_answer}
+                          </div>
+                        )}
+
+                        {/* 3. Enumeration preview */}
+                        {card.question_type === 'enumeration' && (
+                          <div className="mt-1 space-y-1">
+                            <span className="text-[11px] font-bold text-slate-500 block">Mga Katanggap-tanggap na Sagot:</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(Array.isArray(card.options) ? card.options : [card.correct_answer]).map((ans, aIdx) => (
+                                <span key={aIdx} className="px-2.5 py-1 bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold rounded-lg">
+                                  {aIdx + 1}. {ans}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 4. Word scramble preview */}
+                        {card.question_type === 'word_scramble' && (
+                          <div className="mt-1.5 flex items-center gap-3">
+                            <div className="flex gap-1">
+                              {(card.options || []).map((letter, lIdx) => (
+                                <span key={lIdx} className="w-7 h-7 bg-amber-100 text-amber-900 border border-amber-300 font-black text-xs rounded-lg flex items-center justify-center">
+                                  {letter}
+                                </span>
+                              ))}
+                            </div>
+                            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
+                              ➔ {card.correct_answer}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* 5. True False preview */}
+                        {card.question_type === 'true_false' && (
+                          <div className="mt-2 flex gap-2">
+                            {['TAMA', 'MALI'].map((tf) => {
+                              const isCorrect = String(card.correct_answer).toUpperCase() === tf
+                              return (
+                                <span key={tf} className={`px-4 py-1.5 rounded-xl text-xs font-black border ${
+                                  isCorrect 
+                                    ? (tf === 'TAMA' ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-rose-100 text-rose-800 border-rose-400')
+                                    : 'bg-slate-100 text-slate-400 border-slate-200'
+                                }`}>
+                                  {tf} {isCorrect && '✓'}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        {/* 6. Sentence scramble preview */}
+                        {card.question_type === 'sentence_scramble' && (
+                          <div className="mt-1.5 space-y-1">
+                            <div className="flex flex-wrap gap-1">
+                              {(card.options || []).map((w, wIdx) => (
+                                <span key={wIdx} className="px-2 py-0.5 bg-slate-100 border border-slate-300 text-slate-800 text-xs font-semibold rounded-md">
+                                  {w}
+                                </span>
+                              ))}
+                            </div>
+                            <p className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg inline-block border border-emerald-200 mt-1">
+                              Tamang Ayos: {card.correct_answer}
+                            </p>
                           </div>
                         )}
 
@@ -608,7 +921,7 @@ export function AIQuestionGeneratorModal({
                 className="px-6 py-3 bg-brand-primary hover:bg-slate-800 text-white font-black rounded-full text-sm shadow-md flex items-center gap-2 cursor-pointer"
               >
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Idagdag ang {generatedCards.filter((c) => selectedCardIds[c.id]).length} Kard sa Sesyon ➔</span>
+                <span>Idagdag ang {generatedCards.filter((c) => selectedCardIds[c.id]).length} Kard bilang Plain Draft ➔</span>
               </button>
             </div>
 

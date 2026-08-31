@@ -12,7 +12,14 @@ import Link from 'next/link'
 import { Translate } from '@/components/Translate'
 import { AIQuestionGeneratorModal, GeneratedCard } from '@/components/AIQuestionGeneratorModal'
 
-type QuestionType = 'multiple_choice' | 'fill_blank' | 'enumeration'
+type QuestionType = 
+  | 'multiple_choice' 
+  | 'fill_blank' 
+  | 'enumeration' 
+  | 'word_scramble' 
+  | 'true_false' 
+  | 'sentence_scramble'
+
 type GameMode = 'mastery' | 'scheduled' | 'survival'
 type FeedbackTiming = 'immediate' | 'delayed'
 
@@ -130,12 +137,32 @@ export function QuizBuilder({
   }
 
   const addCard = (type: QuestionType) => {
+    let options: string[] | undefined = undefined
+    let correctAnswer: any = ''
+
+    if (type === 'multiple_choice') {
+      options = ['', '', '', '']
+      correctAnswer = 0
+    } else if (type === 'enumeration') {
+      options = ['', '']
+      correctAnswer = []
+    } else if (type === 'word_scramble') {
+      options = []
+      correctAnswer = ''
+    } else if (type === 'true_false') {
+      options = ['TAMA', 'MALI']
+      correctAnswer = 'TAMA'
+    } else if (type === 'sentence_scramble') {
+      options = []
+      correctAnswer = ''
+    }
+
     const newCard: CardData = {
       id: Math.random().toString(36).substr(2, 9),
       type,
       text: '',
-      options: type === 'multiple_choice' ? ['', '', '', ''] : undefined,
-      correctAnswer: type === 'multiple_choice' ? 0 : type === 'enumeration' ? [] : '',
+      options,
+      correctAnswer,
       timeLimitOverride: null,
     }
     setCards([...cards, newCard])
@@ -284,8 +311,8 @@ export function QuizBuilder({
               </p>
               <p className="text-slate-500 text-xs font-medium">
                 {initialQuiz.is_published 
-                  ? <Translate fil="Nailathala ang pagsusulit na ito. Maaari mo itong baguhin o i-save muli." en="This quiz is currently published. You can modify cards and settings." />
-                  : <Translate fil="Naka-draft / withdrawn ang pagsusulit na ito." en="This quiz is currently drafted / withdrawn." />
+                  ? <Translate fil="Nailathala ang pagsusulit na ito na may aktibong game mode at mga patakaran." en="This quiz is currently published with active game mode and gameplay rules." />
+                  : <Translate fil="Naka-save ito bilang plain draft. I-configure ang game mode, oras, at feedback timing bago i-publish." en="Saved as a plain draft. Configure game mode, timers, and feedback timing before publishing." />
                 }
               </p>
             </div>
@@ -684,6 +711,7 @@ export function QuizBuilder({
                  className="w-full bg-slate-50 border-b border-slate-200 px-4 py-3 text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-brand-primary transition-all text-lg"
               />
 
+              {/* 1. Multiple Choice */}
               {card.type === 'multiple_choice' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                   {card.options?.map((opt, i) => (
@@ -692,7 +720,7 @@ export function QuizBuilder({
                          type="button"
                          onClick={() => updateCard(card.id, { correctAnswer: i })}
                          className={`w-6 h-6 rounded-full flex items-center justify-center border transition-colors shrink-0 cursor-pointer ${
-                           card.correctAnswer === i ? 'bg-slate-500 border-slate-500 text-white' : 'border-slate-300 hover:border-slate-400'
+                           card.correctAnswer === i ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'
                          }`}
                        >
                          {card.correctAnswer === i && <CheckCircle2 className="w-4 h-4" />}
@@ -718,6 +746,7 @@ export function QuizBuilder({
                 </div>
               )}
 
+              {/* 2. Fill Blank */}
               {card.type === 'fill_blank' && (
                 <div className="mt-4">
                   <label className="text-xs text-slate-500 font-bold block mb-1">
@@ -736,38 +765,223 @@ export function QuizBuilder({
                 </div>
               )}
 
+              {/* 3. Enumeration */}
+              {card.type === 'enumeration' && (
+                <div className="mt-4 space-y-3">
+                  <label className="text-xs text-slate-700 font-extrabold block">
+                    <Translate fil="Mga Katanggap-tanggap na Aytem (Lahat ng tamang sagot)" en="Accepted List Items (All correct answers)" />
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {(card.options || []).map((opt, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center shrink-0">
+                          {i + 1}
+                        </span>
+                        <input
+                          type="text"
+                          placeholder={`Aytem ${i + 1}`}
+                          value={opt}
+                          onChange={(e) => {
+                            const newOpts = [...(card.options || [])]
+                            newOpts[i] = e.target.value
+                            updateCard(card.id, { options: newOpts, correctAnswer: newOpts })
+                          }}
+                          className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-brand-primary"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newOpts = (card.options || []).filter((_, idx) => idx !== i)
+                            updateCard(card.id, { options: newOpts, correctAnswer: newOpts })
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newOpts = [...(card.options || []), '']
+                      updateCard(card.id, { options: newOpts, correctAnswer: newOpts })
+                    }}
+                    className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-extrabold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Magdagdag ng Aytem sa Listahan</span>
+                  </button>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Maaaring ilista ng mag-aaral ang mga aytem sa anumang pagkakasunod-sunod.
+                  </p>
+                </div>
+              )}
+
+              {/* 4. Word Scramble */}
+              {card.type === 'word_scramble' && (
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label className="text-xs text-slate-700 font-extrabold block mb-1">
+                      <Translate fil="Target na Salita (Tamang Baybay)" en="Target Word (Correct Spelling)" />
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="hal. MARIKIT, PANDIWA, BAYANIHAN"
+                      value={card.correctAnswer || ''}
+                      onChange={(e) => {
+                        const word = e.target.value.toUpperCase().replace(/\s+/g, '')
+                        const scrambled = word.split('').sort(() => Math.random() - 0.5)
+                        updateCard(card.id, { correctAnswer: word, options: scrambled })
+                      }}
+                      className="w-full max-w-sm bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-900 font-mono font-black text-sm uppercase focus:outline-none focus:border-brand-primary"
+                    />
+                  </div>
+
+                  {card.correctAnswer && (
+                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-bold text-amber-900">Preview ng mga Nagulong Titik:</span>
+                      <div className="flex gap-1">
+                        {(card.options || []).map((char, cIdx) => (
+                          <span key={cIdx} className="w-7 h-7 bg-white text-slate-900 border border-amber-300 font-black text-xs rounded-md flex items-center justify-center shadow-2xs">
+                            {char}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const scrambled = String(card.correctAnswer).split('').sort(() => Math.random() - 0.5)
+                          updateCard(card.id, { options: scrambled })
+                        }}
+                        className="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-md text-xs font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Shuffle className="w-3 h-3" /> Re-shuffle
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 5. True or False */}
+              {card.type === 'true_false' && (
+                <div className="mt-4 space-y-2">
+                  <label className="text-xs text-slate-700 font-extrabold block">
+                    <Translate fil="Tamang Sagot" en="Correct Answer" />
+                  </label>
+                  <div className="flex gap-3 max-w-xs">
+                    <button
+                      type="button"
+                      onClick={() => updateCard(card.id, { correctAnswer: 'TAMA', options: ['TAMA', 'MALI'] })}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-black border transition-all cursor-pointer ${
+                        String(card.correctAnswer).toUpperCase() === 'TAMA'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      ✓ TAMA (True)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateCard(card.id, { correctAnswer: 'MALI', options: ['TAMA', 'MALI'] })}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-black border transition-all cursor-pointer ${
+                        String(card.correctAnswer).toUpperCase() === 'MALI'
+                          ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      ✗ MALI (False)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 6. Sentence Scramble */}
+              {card.type === 'sentence_scramble' && (
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label className="text-xs text-slate-700 font-extrabold block mb-1">
+                      <Translate fil="Tamang Buong Pangungusap" en="Correct Full Sentence" />
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="hal. Nagluto si Nanay ng masarap na adobo."
+                      value={card.correctAnswer || ''}
+                      onChange={(e) => {
+                        const sentence = e.target.value
+                        const words = sentence.trim().split(/\s+/).filter(Boolean).sort(() => Math.random() - 0.5)
+                        updateCard(card.id, { correctAnswer: sentence, options: words })
+                      }}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-900 font-bold text-sm focus:outline-none focus:border-brand-primary"
+                    />
+                  </div>
+
+                  {card.correctAnswer && (
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-bold text-slate-600">Mga Nagulong Salita:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {(card.options || []).map((w, wIdx) => (
+                          <span key={wIdx} className="px-2 py-0.5 bg-white border border-slate-300 text-slate-800 text-xs font-bold rounded-md shadow-2xs">
+                            {w}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const words = String(card.correctAnswer).trim().split(/\s+/).filter(Boolean).sort(() => Math.random() - 0.5)
+                          updateCard(card.id, { options: words })
+                        }}
+                        className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-md text-xs font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Shuffle className="w-3 h-3" /> Re-shuffle
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
             </div>
           </div>
         ))}
 
         {/* Add Card Menu */}
-        <div className="bg-slate-50 rounded-2xl p-5 border border-dashed border-slate-300 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500"><Translate fil="Magdagdag ng card:" en="Add new card:" /></span>
-            <button 
+        <div className="bg-slate-50 rounded-3xl p-6 border border-dashed border-slate-300 space-y-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+              <Translate fil="Magdagdag ng Card ayon sa Uri:" en="Add new card by type:" />
+            </span>
+
+            <button
               type="button"
-              onClick={() => addCard('multiple_choice')} 
-              className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              onClick={() => setIsAIModalOpen(true)}
+              className="px-4 py-2 bg-linear-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
             >
-              <Plus className="w-3.5 h-3.5" /> <Translate fil="Pagpipilian" en="Multiple Choice" />
-            </button>
-            <button 
-              type="button"
-              onClick={() => addCard('fill_blank')} 
-              className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" /> <Translate fil="Punan ang Patlang" en="Fill in the Blank" />
+              <Sparkles className="w-4 h-4 text-slate-950" />
+              <Translate fil="Bumuo gamit ang AI (Gemini)" en="Generate with AI (Gemini)" /> ✨
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsAIModalOpen(true)}
-            className="px-5 py-2.5 bg-linear-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
-          >
-            <Sparkles className="w-4 h-4 text-slate-950" />
-            <Translate fil="Bumuo gamit ang AI (Gemini)" en="Generate with AI (Gemini)" /> ✨
-          </button>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+            {[
+              { type: 'multiple_choice', label: 'Multiple Choice', bg: 'bg-white hover:bg-blue-50 border-slate-200 hover:border-blue-300 text-slate-800' },
+              { type: 'fill_blank', label: 'Punan ang Patlang', bg: 'bg-white hover:bg-indigo-50 border-slate-200 hover:border-indigo-300 text-slate-800' },
+              { type: 'enumeration', label: 'Enumerasyon', bg: 'bg-white hover:bg-emerald-50 border-slate-200 hover:border-emerald-300 text-slate-800' },
+              { type: 'word_scramble', label: 'Word Scramble', bg: 'bg-white hover:bg-amber-50 border-slate-200 hover:border-amber-300 text-slate-800' },
+              { type: 'true_false', label: 'Tama o Mali', bg: 'bg-white hover:bg-rose-50 border-slate-200 hover:border-rose-300 text-slate-800' },
+              { type: 'sentence_scramble', label: 'Ayusin ang Pangungusap', bg: 'bg-white hover:bg-purple-50 border-slate-200 hover:border-purple-300 text-slate-800' }
+            ].map((btn) => (
+              <button
+                key={btn.type}
+                type="button"
+                onClick={() => addCard(btn.type as QuestionType)}
+                className={`p-3 rounded-2xl border text-center text-xs font-extrabold transition-all shadow-2xs flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${btn.bg}`}
+              >
+                <Plus className="w-4 h-4" />
+                <span className="leading-tight">{btn.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

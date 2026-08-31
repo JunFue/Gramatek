@@ -16,6 +16,7 @@ import { Translate } from '@/components/Translate'
 interface UserAnswerData {
   selectedAnswer?: any
   textAnswer?: string
+  enumAnswers?: string[]
   scrambleSelectedIndices?: number[]
   isSkipped?: boolean
 }
@@ -42,6 +43,7 @@ export function QuizPlayer({
   const [timeLeft, setTimeLeft] = useState(card?.time_limit_override || quiz.time_limit_seconds || 15)
   const [selectedAnswer, setSelectedAnswer] = useState<any>(null)
   const [textAnswer, setTextAnswer] = useState('')
+  const [enumAnswers, setEnumAnswers] = useState<string[]>([])
   const [scrambleSelectedIndices, setScrambleSelectedIndices] = useState<number[]>([])
 
   const [isEvaluating, setIsEvaluating] = useState(false)
@@ -88,10 +90,12 @@ export function QuizPlayer({
     if (saved) {
       setSelectedAnswer(saved.selectedAnswer !== undefined ? saved.selectedAnswer : null)
       setTextAnswer(saved.textAnswer || '')
+      setEnumAnswers(saved.enumAnswers || [])
       setScrambleSelectedIndices(saved.scrambleSelectedIndices || [])
     } else {
       setSelectedAnswer(null)
       setTextAnswer('')
+      setEnumAnswers([])
       setScrambleSelectedIndices([])
     }
     setIsEvaluating(false)
@@ -106,6 +110,7 @@ export function QuizPlayer({
       [idx]: {
         selectedAnswer,
         textAnswer,
+        enumAnswers,
         scrambleSelectedIndices,
         isSkipped
       }
@@ -157,9 +162,10 @@ export function QuizPlayer({
 
   // Helper to check if current card has an answer provided
   const hasCurrentAnswer = () => {
-    if (card?.question_type === 'multiple_choice') return selectedAnswer !== null
+    if (card?.question_type === 'multiple_choice' || card?.question_type === 'true_false') return selectedAnswer !== null
     if (card?.question_type === 'fill_blank') return textAnswer.trim() !== ''
-    if (card?.question_type === 'sentence_scramble') return scrambleSelectedIndices.length > 0
+    if (card?.question_type === 'enumeration') return enumAnswers.some(a => a && a.trim() !== '')
+    if (card?.question_type === 'word_scramble' || card?.question_type === 'sentence_scramble') return scrambleSelectedIndices.length > 0
     return false
   }
 
@@ -168,9 +174,11 @@ export function QuizPlayer({
     if (idx === currentIdx) return hasCurrentAnswer()
     const saved = answersMap[idx]
     if (!saved) return false
-    if (cards[idx]?.question_type === 'multiple_choice') return saved.selectedAnswer !== null && saved.selectedAnswer !== undefined
-    if (cards[idx]?.question_type === 'fill_blank') return !!saved.textAnswer && saved.textAnswer.trim() !== ''
-    if (cards[idx]?.question_type === 'sentence_scramble') return !!saved.scrambleSelectedIndices && saved.scrambleSelectedIndices.length > 0
+    const qType = cards[idx]?.question_type
+    if (qType === 'multiple_choice' || qType === 'true_false') return saved.selectedAnswer !== null && saved.selectedAnswer !== undefined
+    if (qType === 'fill_blank') return !!saved.textAnswer && saved.textAnswer.trim() !== ''
+    if (qType === 'enumeration') return !!saved.enumAnswers && saved.enumAnswers.some(a => a && a.trim() !== '')
+    if (qType === 'word_scramble' || qType === 'sentence_scramble') return !!saved.scrambleSelectedIndices && saved.scrambleSelectedIndices.length > 0
     return false
   }
 
@@ -190,10 +198,25 @@ export function QuizPlayer({
     if (targetCard.question_type === 'multiple_choice') {
       const chosenIdx = answerData?.selectedAnswer
       if (chosenIdx !== undefined && chosenIdx !== null && targetCard.options) {
-        userText = `${String.fromCharCode(65 + chosenIdx)}. ${targetCard.options[chosenIdx] || ''}`
+        userText = typeof chosenIdx === 'number' 
+          ? `${String.fromCharCode(65 + chosenIdx)}. ${targetCard.options[chosenIdx] || ''}`
+          : String(chosenIdx)
       }
-      correctText = `${String.fromCharCode(65 + targetCard.correct_answer)}. ${targetCard.options?.[targetCard.correct_answer] || ''}`
-      correct = chosenIdx === targetCard.correct_answer
+      
+      const targetAns = targetCard.correct_answer
+      if (typeof targetAns === 'number') {
+        correctText = `${String.fromCharCode(65 + targetAns)}. ${targetCard.options?.[targetAns] || ''}`
+        correct = chosenIdx === targetAns
+      } else {
+        correctText = String(targetAns || '')
+        const chosenText = typeof chosenIdx === 'number' ? targetCard.options?.[chosenIdx] : chosenIdx
+        correct = String(chosenText || '').trim().toLowerCase() === correctText.trim().toLowerCase()
+      }
+    } else if (targetCard.question_type === 'true_false') {
+      const chosen = answerData?.selectedAnswer
+      userText = chosen ? String(chosen).toUpperCase() : 'Walang Sagot / Skipped'
+      correctText = String(targetCard.correct_answer || 'TAMA').toUpperCase()
+      correct = userText === correctText
     } else if (targetCard.question_type === 'fill_blank') {
       const normalizeText = (str: string) => (str || '').toLowerCase().replace(/['"’`]/g, "'").trim()
       const cleanText = (str: string) => (str || '').toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -203,17 +226,42 @@ export function QuizPlayer({
       correctText = String(targetCard.correct_answer || '')
       
       const userNorm = normalizeText(inputStr)
-      const correctNorm = normalizeText(String(targetCard.correct_answer || ''))
-      correct = userNorm === correctNorm || (cleanText(inputStr) !== '' && cleanText(inputStr) === cleanText(String(targetCard.correct_answer || '')))
+      const correctNorm = normalizeText(correctText)
+      correct = userNorm === correctNorm || (cleanText(inputStr) !== '' && cleanText(inputStr) === cleanText(correctText))
+    } else if (targetCard.question_type === 'enumeration') {
+      const userList = (answerData?.enumAnswers || []).map(a => (a || '').trim().toLowerCase()).filter(Boolean)
+      userText = userList.length > 0 ? userList.join(', ') : 'Walang Sagot / Skipped'
+      
+      const rawAccepted = Array.isArray(targetCard.options) && targetCard.options.length > 0
+        ? targetCard.options
+        : Array.isArray(targetCard.correct_answer)
+        ? targetCard.correct_answer
+        : String(targetCard.correct_answer || '').split(',')
+
+      const acceptedList = rawAccepted.map((s: any) => String(s).trim().toLowerCase()).filter(Boolean)
+      correctText = acceptedList.join(', ')
+
+      // Check that all entered answers match items in acceptedList (unique)
+      const uniqueEntered = Array.from(new Set(userList))
+      const matches = uniqueEntered.filter(u => acceptedList.includes(u))
+      correct = matches.length > 0 && matches.length === uniqueEntered.length && uniqueEntered.length >= Math.min(2, acceptedList.length)
+    } else if (targetCard.question_type === 'word_scramble') {
+      const letters = targetCard.options || []
+      const indices = answerData?.scrambleSelectedIndices || []
+      const userWord = indices.map((i: number) => letters[i] || '').join('').toUpperCase()
+      userText = userWord || 'Walang Sagot / Skipped'
+      correctText = String(targetCard.correct_answer || '').toUpperCase().trim()
+      correct = userWord.trim() === correctText
     } else if (targetCard.question_type === 'sentence_scramble') {
       const normalizeSentence = (str: string) => 
         (str || '').toLowerCase().replace(/['"’“”,.!?\-–—]/g, ' ').replace(/\s+/g, ' ').trim()
       
+      const words = targetCard.options || targetCard.scrambled_words || []
       const indices = answerData?.scrambleSelectedIndices || []
-      const userSentence = indices.map((i: number) => targetCard.scrambled_words?.[i] || '').join(' ')
+      const userSentence = indices.map((i: number) => words[i] || '').join(' ')
       userText = userSentence ? userSentence.trim() : 'Walang Sagot / Skipped'
-      correctText = targetCard.correct_sentence || ''
-      correct = normalizeSentence(userSentence) === normalizeSentence(targetCard.correct_sentence || '')
+      correctText = String(targetCard.correct_answer || targetCard.correct_sentence || '')
+      correct = normalizeSentence(userSentence) === normalizeSentence(correctText)
     }
 
     return { isCorrect: correct, userAnswerText: userText, correctAnswerText: correctText }
@@ -831,6 +879,9 @@ export function QuizPlayer({
                <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-extrabold uppercase tracking-wider border border-slate-200">
                  {card?.question_type === 'multiple_choice' && <Translate fil="Pagpipilian (Multiple Choice)" en="Multiple Choice" />}
                  {card?.question_type === 'fill_blank' && <Translate fil="Punan ang Patlang" en="Fill in the Blank" />}
+                 {card?.question_type === 'enumeration' && <Translate fil="Enumerasyon (Listahan)" en="Enumeration" />}
+                 {card?.question_type === 'word_scramble' && <Translate fil="Ayusin ang Titik (Word Scramble)" en="Word Scramble" />}
+                 {card?.question_type === 'true_false' && <Translate fil="Tama o Mali (True or False)" en="True or False" />}
                  {card?.question_type === 'sentence_scramble' && <Translate fil="Ayusin ang Pangungusap" en="Sentence Unscramble" />}
                </span>
                <span className="text-xs font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
@@ -854,7 +905,8 @@ export function QuizPlayer({
                    
                    // Only show immediate correct/incorrect coloring if feedback is immediate
                    if (isEvaluating && !isDelayedFeedback) {
-                     if (card.correct_answer === idx) {
+                     const isTarget = card.correct_answer === idx || String(opt).trim().toLowerCase() === String(card.correct_answer).trim().toLowerCase()
+                     if (isTarget) {
                        btnClass = "bg-emerald-500 text-white border-emerald-600 scale-105 shadow-xl shadow-emerald-500/20 font-black"
                      } else if (selectedAnswer === idx) {
                        btnClass = "bg-rose-50 text-rose-600 border-rose-200 shadow-xs font-bold"
@@ -883,20 +935,52 @@ export function QuizPlayer({
                </div>
              )}
 
-             {/* 2. Fill in the Blank */}
+             {/* 2. True or False */}
+             {card?.question_type === 'true_false' && (
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-lg mx-auto">
+                 {['TAMA', 'MALI'].map((choice) => {
+                   const isSelected = selectedAnswer === choice
+                   let btnStyle = choice === 'TAMA' 
+                     ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-950' 
+                     : 'bg-rose-50 hover:bg-rose-100 border-rose-300 text-rose-950'
+
+                   if (isSelected) {
+                     btnStyle = choice === 'TAMA'
+                       ? 'bg-emerald-600 text-white border-emerald-600 ring-4 ring-emerald-500/20 shadow-lg scale-105'
+                       : 'bg-rose-600 text-white border-rose-600 ring-4 ring-rose-500/20 shadow-lg scale-105'
+                   }
+
+                   if (isEvaluating && !isDelayedFeedback) {
+                     const isCorrectChoice = String(card.correct_answer).toUpperCase() === choice
+                     if (isCorrectChoice) {
+                       btnStyle = 'bg-emerald-500 text-white border-emerald-600 scale-105 shadow-xl font-black ring-4 ring-emerald-500/30'
+                     } else if (isSelected) {
+                       btnStyle = 'bg-rose-500 text-white border-rose-600 shadow-md font-bold'
+                     } else {
+                       btnStyle = 'opacity-30 bg-slate-100 text-slate-400 border-slate-200 shadow-none'
+                     }
+                   }
+
+                   return (
+                     <button
+                       key={choice}
+                       disabled={isEvaluating}
+                       onClick={() => {
+                         setSelectedAnswer(choice)
+                         persistActiveInputs(currentIdx, false)
+                       }}
+                       className={`p-8 rounded-3xl border-2 text-center text-xl md:text-2xl font-black transition-all duration-200 cursor-pointer ${btnStyle}`}
+                     >
+                       {choice === 'TAMA' ? '✓ TAMA' : '✗ MALI'}
+                     </button>
+                   )
+                 })}
+               </div>
+             )}
+
+             {/* 3. Fill in the Blank */}
              {card?.question_type === 'fill_blank' && (
                <div className="max-w-lg mx-auto text-center space-y-6">
-                 {card.pattern_clue && (
-                   <div className="bg-slate-100 py-3 px-6 rounded-2xl border border-slate-300 shadow-inner">
-                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
-                       <Translate fil="Gabay na Titik" en="Letter Pattern" />:
-                     </p>
-                     <p className="font-mono text-2xl md:text-3xl font-black tracking-widest text-slate-800">
-                       {card.pattern_clue}
-                     </p>
-                   </div>
-                 )}
-
                  <input 
                    type="text" 
                    value={textAnswer}
@@ -933,8 +1017,120 @@ export function QuizPlayer({
                </div>
              )}
 
-             {/* 3. Sentence Scramble Builder */}
-             {card?.question_type === 'sentence_scramble' && card.scrambled_words && (
+             {/* 4. Enumeration */}
+             {card?.question_type === 'enumeration' && (
+               <div className="max-w-lg mx-auto space-y-4">
+                 <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider text-center mb-2">
+                   <Translate fil="Ilista ang mga sagot (anumang ayos):" en="List the answers (any order):" />
+                 </p>
+                 
+                 {Array.from({ length: Math.max(2, (card.options || []).length || 3) }).map((_, slotIdx) => (
+                   <div key={slotIdx} className="flex items-center gap-3">
+                     <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center shrink-0">
+                       {slotIdx + 1}
+                     </span>
+                     <input
+                       type="text"
+                       value={enumAnswers[slotIdx] || ''}
+                       onChange={(e) => {
+                         const newAns = [...enumAnswers]
+                         newAns[slotIdx] = e.target.value
+                         setEnumAnswers(newAns)
+                         setAnswersMap(prev => ({
+                           ...prev,
+                           [currentIdx]: { ...prev[currentIdx], enumAnswers: newAns, isSkipped: false }
+                         }))
+                       }}
+                       disabled={isEvaluating}
+                       placeholder={`Sagot ${slotIdx + 1}...`}
+                       className="flex-1 bg-white border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-brand-primary"
+                     />
+                   </div>
+                 ))}
+               </div>
+             )}
+
+             {/* 5. Word Scramble */}
+             {card?.question_type === 'word_scramble' && (
+               <div className="space-y-6 max-w-lg mx-auto text-center">
+                 {/* Word Construction Slot */}
+                 <div className="min-h-[70px] p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 flex flex-wrap gap-2 items-center justify-center shadow-inner">
+                   {scrambleSelectedIndices.length === 0 ? (
+                     <p className="text-slate-400 font-bold text-xs">I-tap ang mga titik sa ibaba...</p>
+                   ) : (
+                     scrambleSelectedIndices.map((letterIdx, pos) => {
+                       const char = (card.options || [])[letterIdx]
+                       return (
+                         <button
+                           key={`tile_${letterIdx}_${pos}`}
+                           disabled={isEvaluating}
+                           onClick={() => {
+                             const newIndices = scrambleSelectedIndices.filter((_, i) => i !== pos)
+                             setScrambleSelectedIndices(newIndices)
+                             setAnswersMap(prev => ({
+                               ...prev,
+                               [currentIdx]: { ...prev[currentIdx], scrambleSelectedIndices: newIndices, isSkipped: false }
+                             }))
+                           }}
+                           className="w-10 h-10 bg-amber-500 hover:bg-rose-500 text-white font-black text-lg rounded-xl shadow-md flex items-center justify-center transition-all cursor-pointer animate-scale-up"
+                           title="I-tap para alisin"
+                         >
+                           {char}
+                         </button>
+                       )
+                     })
+                   )}
+                 </div>
+
+                 {/* Letter Bank */}
+                 <div className="flex flex-wrap gap-2 justify-center p-4 bg-slate-100 rounded-2xl border border-slate-200">
+                   {(card.options || []).map((letter: string, lIdx: number) => {
+                     const isUsed = scrambleSelectedIndices.includes(lIdx)
+
+                     return (
+                       <button
+                         key={`bank_${lIdx}`}
+                         disabled={isEvaluating || isUsed}
+                         onClick={() => {
+                           const newIndices = [...scrambleSelectedIndices, lIdx]
+                           setScrambleSelectedIndices(newIndices)
+                           setAnswersMap(prev => ({
+                             ...prev,
+                             [currentIdx]: { ...prev[currentIdx], scrambleSelectedIndices: newIndices, isSkipped: false }
+                           }))
+                         }}
+                         className={`w-12 h-12 rounded-2xl font-black text-xl border transition-all cursor-pointer flex items-center justify-center ${
+                           isUsed
+                             ? 'bg-slate-200 text-slate-400 border-slate-300 opacity-40 cursor-not-allowed'
+                             : 'bg-white hover:bg-amber-400 hover:text-slate-950 text-slate-900 border-slate-300 shadow-sm active:scale-90'
+                         }`}
+                       >
+                         {letter}
+                       </button>
+                     )
+                   })}
+                 </div>
+
+                 {scrambleSelectedIndices.length > 0 && !isEvaluating && (
+                   <button
+                     type="button"
+                     onClick={() => {
+                       setScrambleSelectedIndices([])
+                       setAnswersMap(prev => ({
+                         ...prev,
+                         [currentIdx]: { ...prev[currentIdx], scrambleSelectedIndices: [], isSkipped: false }
+                       }))
+                     }}
+                     className="text-xs font-bold text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
+                   >
+                     Alisin Lahat ng Titik
+                   </button>
+                 )}
+               </div>
+             )}
+
+             {/* 6. Sentence Scramble Builder */}
+             {card?.question_type === 'sentence_scramble' && (
                <div className="space-y-8">
                  {/* Slot */}
                  <div className="min-h-[100px] p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 flex flex-wrap gap-2.5 items-center justify-start relative shadow-inner">
@@ -944,12 +1140,20 @@ export function QuizPlayer({
                      </p>
                    ) : (
                      scrambleSelectedIndices.map((idx, pos) => {
-                       const word = card.scrambled_words[idx]
+                       const wordsList = card.options || card.scrambled_words || []
+                       const word = wordsList[idx]
                        return (
                          <button
                            key={`sel_${idx}_${pos}`}
                            disabled={isEvaluating}
-                           onClick={() => handleToggleWord(idx)}
+                           onClick={() => {
+                             const newIndices = scrambleSelectedIndices.filter((_, i) => i !== pos)
+                             setScrambleSelectedIndices(newIndices)
+                             setAnswersMap(prev => ({
+                               ...prev,
+                               [currentIdx]: { ...prev[currentIdx], scrambleSelectedIndices: newIndices, isSkipped: false }
+                             }))
+                           }}
                            className="px-4 py-2.5 bg-brand-primary hover:bg-rose-500 text-white font-bold rounded-xl shadow-md transition-all transform active:scale-95 text-base flex items-center gap-1.5 animate-pop cursor-pointer"
                            title="I-tap upang alisin"
                          >
@@ -963,28 +1167,21 @@ export function QuizPlayer({
 
                  {/* Word Bank Pool */}
                  <div>
-                   <div className="flex items-center justify-between mb-3">
-                     <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
-                       <Translate fil="Bangko ng mga Salita" en="Word Bank" />
-                     </span>
-                     {scrambleSelectedIndices.length > 0 && !isEvaluating && (
-                       <button 
-                         onClick={handleResetSentence}
-                         className="text-xs font-bold text-slate-500 hover:text-rose-600 flex items-center gap-1 transition-colors cursor-pointer"
-                       >
-                         <RotateCcw className="w-3.5 h-3.5" /> <Translate fil="Linisin / I-reset" en="Clear" />
-                       </button>
-                     )}
-                   </div>
-
                    <div className="flex flex-wrap gap-2.5 justify-center p-4 bg-slate-100 rounded-2xl border border-slate-200">
-                     {card.scrambled_words.map((word: string, idx: number) => {
+                     {(card.options || card.scrambled_words || []).map((word: string, idx: number) => {
                        const isSelected = scrambleSelectedIndices.includes(idx)
                        return (
                          <button
                            key={`pool_${idx}`}
                            disabled={isEvaluating || isSelected}
-                           onClick={() => handleToggleWord(idx)}
+                           onClick={() => {
+                             const newIndices = [...scrambleSelectedIndices, idx]
+                             setScrambleSelectedIndices(newIndices)
+                             setAnswersMap(prev => ({
+                               ...prev,
+                               [currentIdx]: { ...prev[currentIdx], scrambleSelectedIndices: newIndices, isSkipped: false }
+                             }))
+                           }}
                            className={`px-4 py-2.5 rounded-xl font-bold text-base transition-all duration-150 cursor-pointer ${
                              isSelected 
                                ? 'bg-slate-200 text-slate-400 border border-slate-300 scale-95 opacity-40 cursor-not-allowed' 

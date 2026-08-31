@@ -19,7 +19,7 @@ export interface CardItem {
   quiz_id?: string
   quiz_title?: string
   question_text: string
-  question_type: 'multiple_choice' | 'fill_blank' | 'enumeration'
+  question_type: 'multiple_choice' | 'fill_blank' | 'enumeration' | 'word_scramble' | 'true_false' | 'sentence_scramble'
   options?: string[]
   correct_answer: any
   time_limit?: number | null
@@ -173,7 +173,7 @@ export function SetupWizardClient({
       question_type: c.question_type,
       options: c.options || [],
       correct_answer: c.correct_answer,
-      time_limit: c.time_limit || defaultTimeLimit
+      time_limit: c.time_limit || null
     }))
 
     setSelectedCards((prev) => [...prev, ...converted])
@@ -579,7 +579,12 @@ export function SetupWizardClient({
                               </p>
                               <div className="flex flex-wrap items-center gap-2 mt-1">
                                 <span className="px-2 py-0.5 bg-slate-200 text-slate-700 text-[10px] font-black uppercase rounded">
-                                  {card.question_type === 'multiple_choice' ? 'Multiple Choice' : 'Fill Blank'}
+                                  {card.question_type === 'multiple_choice' && 'Multiple Choice'}
+                                  {card.question_type === 'fill_blank' && 'Punan ang Patlang'}
+                                  {card.question_type === 'enumeration' && 'Enumerasyon'}
+                                  {card.question_type === 'word_scramble' && 'Word Scramble'}
+                                  {card.question_type === 'true_false' && 'Tama o Mali'}
+                                  {card.question_type === 'sentence_scramble' && 'Ayusin ang Pangungusap'}
                                 </span>
                                 {card.quiz_title && (
                                   <span className="text-[10px] font-semibold text-slate-500">

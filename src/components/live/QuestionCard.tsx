@@ -46,6 +46,7 @@ export function QuestionCard({
   onSubmit
 }: QuestionCardProps) {
   const [selectedChoice, setSelectedChoice] = useState<string | null>(myAnswer)
+  const [customTextInput, setCustomTextInput] = useState<string>(myAnswer || '')
   const [submitting, setSubmitting] = useState<boolean>(false)
   const [submitted, setSubmitted] = useState<boolean>(!!myAnswer)
 
@@ -126,65 +127,93 @@ export function QuestionCard({
         </div>
       )}
 
-      {/* Choices Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-        {displayChoices.map((choice, idx) => {
-          const choiceLetter = String.fromCharCode(65 + idx)
-          const isSelected = selectedChoice === choice.text || myAnswer === choice.text
-          const isCorrect = isRevealed && (choice.text.trim().toLowerCase() === question.correct_answer.trim().toLowerCase())
-          const isWrongSelected = isRevealed && isSelected && !isCorrect
+      {/* Choices Grid or Text Input */}
+      {displayChoices.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
+          {displayChoices.map((choice, idx) => {
+            const choiceLetter = String.fromCharCode(65 + idx)
+            const isSelected = selectedChoice === choice.text || myAnswer === choice.text
+            const isCorrect = isRevealed && (choice.text.trim().toLowerCase() === question.correct_answer.trim().toLowerCase())
+            const isWrongSelected = isRevealed && isSelected && !isCorrect
 
-          let choiceStyle = 'bg-slate-50 border-slate-200 text-slate-800 hover:border-brand-primary hover:bg-brand-primary/5 cursor-pointer'
+            let choiceStyle = 'bg-slate-50 border-slate-200 text-slate-800 hover:border-brand-primary hover:bg-brand-primary/5 cursor-pointer'
 
-          if (isRevealed) {
-            if (isCorrect) {
-              choiceStyle = 'bg-emerald-50 border-2 border-emerald-500 text-emerald-950 font-black shadow-md'
-            } else if (isWrongSelected) {
-              choiceStyle = 'bg-rose-50 border-2 border-rose-500 text-rose-950 font-bold'
-            } else {
+            if (isRevealed) {
+              if (isCorrect) {
+                choiceStyle = 'bg-emerald-50 border-2 border-emerald-500 text-emerald-950 font-black shadow-md'
+              } else if (isWrongSelected) {
+                choiceStyle = 'bg-rose-50 border-2 border-rose-500 text-rose-950 font-bold'
+              } else {
+                choiceStyle = 'bg-slate-50/60 border-slate-200 text-slate-400 opacity-60'
+              }
+            } else if (submitted && isSelected) {
+              choiceStyle = 'bg-brand-primary/10 border-2 border-brand-primary text-brand-primary font-black shadow-md'
+            } else if (submitted) {
               choiceStyle = 'bg-slate-50/60 border-slate-200 text-slate-400 opacity-60'
             }
-          } else if (submitted && isSelected) {
-            choiceStyle = 'bg-brand-primary/10 border-2 border-brand-primary text-brand-primary font-black shadow-md'
-          } else if (submitted) {
-            choiceStyle = 'bg-slate-50/60 border-slate-200 text-slate-400 opacity-60'
-          }
 
-          return (
-            <button
-              key={choice.id}
-              disabled={readOnly || !canSubmit || submitted || isRevealed}
-              onClick={() => handleSubmit(choice.text)}
-              className={`w-full p-4 md:p-5 rounded-2xl border text-left transition-all flex items-start gap-3.5 shadow-sm active:scale-[0.99] disabled:cursor-default ${choiceStyle}`}
-            >
-              <span
-                className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border ${
-                  isRevealed && isCorrect
-                    ? 'bg-emerald-500 text-white border-emerald-600'
-                    : isRevealed && isWrongSelected
-                    ? 'bg-rose-500 text-white border-rose-600'
-                    : isSelected
-                    ? 'bg-brand-primary text-white border-brand-primary'
-                    : 'bg-white text-slate-700 border-slate-200 shadow-inner'
-                }`}
+            return (
+              <button
+                key={choice.id}
+                disabled={readOnly || !canSubmit || submitted || isRevealed}
+                onClick={() => handleSubmit(choice.text)}
+                className={`w-full p-4 md:p-5 rounded-2xl border text-left transition-all flex items-start gap-3.5 shadow-sm active:scale-[0.99] disabled:cursor-default ${choiceStyle}`}
               >
-                {choiceLetter}
-              </span>
+                <span
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border ${
+                    isRevealed && isCorrect
+                      ? 'bg-emerald-500 text-white border-emerald-600'
+                      : isRevealed && isWrongSelected
+                      ? 'bg-rose-500 text-white border-rose-600'
+                      : isSelected
+                      ? 'bg-brand-primary text-white border-brand-primary'
+                      : 'bg-white text-slate-700 border-slate-200 shadow-inner'
+                  }`}
+                >
+                  {choiceLetter}
+                </span>
 
-              <span className="text-base md:text-lg font-bold flex-1 pt-0.5 leading-relaxed">
-                {choice.text}
-              </span>
+                <span className="text-base md:text-lg font-bold flex-1 pt-0.5 leading-relaxed">
+                  {choice.text}
+                </span>
 
-              {isRevealed && isCorrect && (
-                <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 self-center" />
-              )}
-              {isRevealed && isWrongSelected && (
-                <XCircle className="w-6 h-6 text-rose-600 shrink-0 self-center" />
-              )}
+                {isRevealed && isCorrect && (
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 self-center" />
+                )}
+                {isRevealed && isWrongSelected && (
+                  <XCircle className="w-6 h-6 text-rose-600 shrink-0 self-center" />
+                )}
+              </button>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="max-w-lg mx-auto space-y-4 relative z-10">
+          <input
+            type="text"
+            value={customTextInput}
+            onChange={(e) => setCustomTextInput(e.target.value)}
+            disabled={readOnly || !canSubmit || submitted || isRevealed}
+            placeholder="I-type ang iyong sagot..."
+            className="w-full bg-slate-50 border-2 border-slate-300 rounded-2xl px-5 py-3.5 text-lg font-bold text-slate-900 focus:outline-none focus:border-brand-primary uppercase shadow-inner"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && customTextInput.trim()) {
+                handleSubmit(customTextInput.trim())
+              }
+            }}
+          />
+          {!submitted && canSubmit && !readOnly && !isRevealed && (
+            <button
+              type="button"
+              onClick={() => handleSubmit(customTextInput.trim())}
+              disabled={!customTextInput.trim() || submitting}
+              className="w-full py-3.5 bg-brand-primary hover:bg-slate-800 text-white font-black rounded-2xl shadow-md cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+            >
+              Ipasa ang Sagot ➔
             </button>
-          )
-        })}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Submission Feedback Banner */}
       {!readOnly && submitted && !isRevealed && (

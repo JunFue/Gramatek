@@ -44,11 +44,23 @@ export async function saveQuiz(
     quizData.feedback_timing = config.feedbackTiming || 'immediate'
   }
 
-  const { data: quiz, error: quizError } = await supabase
+  let insertRes = await supabase
     .from('quizzes')
     .insert(quizData)
     .select('id')
     .single()
+
+  // If column feedback_timing is missing in DB schema, retry without it
+  if (insertRes.error && (insertRes.error.message.includes('feedback_timing') || insertRes.error.code === 'PGRST204')) {
+    const { feedback_timing, ...dataWithoutFeedback } = quizData
+    insertRes = await supabase
+      .from('quizzes')
+      .insert(dataWithoutFeedback)
+      .select('id')
+      .single()
+  }
+
+  const { data: quiz, error: quizError } = insertRes
 
   if (quizError || !quiz) {
     console.error('Failed to create quiz:', quizError)
@@ -73,6 +85,11 @@ export async function saveQuiz(
 
     if (cardsError) {
       console.error('Failed to save quiz cards:', cardsError)
+      if (cardsError.message?.includes('quiz_cards_question_type_check')) {
+        return { 
+          error: 'Kailangang patakbuhin ang Migration 007 sa Supabase SQL Editor upang suportahan ang mga bagong uri ng kard (Word Scramble, Tama/Mali, Sentence Scramble).' 
+        }
+      }
       return { error: cardsError?.message || 'Failed to save quiz cards' }
     }
   }
@@ -157,11 +174,21 @@ export async function updateQuiz(
     quizUpdates.feedback_timing = config.feedbackTiming || 'immediate'
   }
 
-  const { error: updateError } = await supabase
+  let { error: updateError } = await supabase
     .from('quizzes')
     .update(quizUpdates)
     .eq('id', quiz_id)
     .eq('educator_id', user.id)
+
+  if (updateError && (updateError.message.includes('feedback_timing') || updateError.code === 'PGRST204')) {
+    const { feedback_timing, ...updatesWithoutFeedback } = quizUpdates
+    const retry = await supabase
+      .from('quizzes')
+      .update(updatesWithoutFeedback)
+      .eq('id', quiz_id)
+      .eq('educator_id', user.id)
+    updateError = retry.error
+  }
 
   if (updateError) {
     console.error('Failed to update quiz:', updateError)
@@ -196,6 +223,11 @@ export async function updateQuiz(
 
     if (insertCardsError) {
       console.error('Failed to insert updated quiz cards:', insertCardsError)
+      if (insertCardsError.message?.includes('quiz_cards_question_type_check')) {
+        return { 
+          error: 'Kailangang patakbuhin ang Migration 007 sa Supabase SQL Editor upang suportahan ang mga bagong uri ng kard (Word Scramble, Tama/Mali, Sentence Scramble).' 
+        }
+      }
       return { error: insertCardsError.message || 'Failed to update quiz cards' }
     }
   }
