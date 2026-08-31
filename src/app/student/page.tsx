@@ -1,4 +1,4 @@
-﻿import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { Library } from 'lucide-react'
 import Link from 'next/link'
 import { JoinClassroomForm } from '@/components/JoinClassroomForm'
@@ -89,7 +89,7 @@ export default async function StudentDashboard() {
       <TriviaSlideshow />
 
       {/* Built-in Practice Game Feature Showcase */}
-      <div className="bg-linear-to-r from-emerald-50 via-white to-amber-50 rounded-3xl p-6 md:p-8 border-2 border-brand-primary/20 shadow-md">
+      <div className="bg-gradient-to-r from-emerald-50 via-white to-amber-50 rounded-3xl p-6 md:p-8 border-2 border-brand-primary/20 shadow-md">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">

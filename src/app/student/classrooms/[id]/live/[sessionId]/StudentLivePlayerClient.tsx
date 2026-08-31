@@ -1,0 +1,499 @@
+'use client'
+
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { 
+  Users, User, Trophy, ShieldAlert, AlertCircle, Clock, 
+  Crown, CheckCircle2, ArrowLeft, Loader2, Sparkles, LogOut
+} from 'lucide-react'
+import confetti from 'canvas-confetti'
+import { Translate } from '@/components/Translate'
+import { LiveSession, LiveSessionGroup, LiveSessionParticipant } from '@/types/live-session'
+import { useLiveSession } from '@/lib/hooks/useLiveSession'
+import { useServerTimeOffset } from '@/lib/hooks/useServerTimeOffset'
+import { QuestionCard } from '@/components/live/QuestionCard'
+import { GroupRoster } from '@/components/live/GroupRoster'
+import { LeaderVotePanel } from '@/components/live/LeaderVotePanel'
+import { LiveLeaderboard } from '@/components/live/LiveLeaderboard'
+import { FirstCorrectBadge } from '@/components/live/FirstCorrectBadge'
+import { joinLiveSessionAction, submitAnswerAction } from '@/app/student/live/actions'
+import { createClient } from '@/lib/supabase/client'
+
+interface StudentLivePlayerClientProps {
+  classroomId: string
+  classroomName: string
+  initialSession: LiveSession
+  currentUserId: string
+  userName: string
+  userAvatar?: string | null
+}
+
+export function StudentLivePlayerClient({
+  classroomId,
+  classroomName,
+  initialSession,
+  currentUserId,
+  userName,
+  userAvatar
+}: StudentLivePlayerClientProps) {
+  const router = useRouter()
+  const supabase = createClient()
+  const { serverOffset } = useServerTimeOffset()
+
+  const {
+    session,
+    questions,
+    currentQuestion,
+    loading: sessionLoading
+  } = useLiveSession(initialSession.id, initialSession)
+
+  const [joining, setJoining] = useState<boolean>(true)
+  const [joinError, setJoinError] = useState<string | null>(null)
+  const [isRemoved, setIsRemoved] = useState<boolean>(false)
+
+  // Participant & Group state
+  const [myParticipant, setMyParticipant] = useState<LiveSessionParticipant | null>(null)
+  const [myGroup, setMyGroup] = useState<LiveSessionGroup | null>(null)
+  const [groupMembers, setGroupMembers] = useState<LiveSessionParticipant[]>([])
+
+  // Answer Submission state for current question
+  const [myAnswer, setMyAnswer] = useState<string | null>(null)
+  const [submissionResult, setSubmissionResult] = useState<{
+    isCorrect?: boolean
+    points?: number
+  } | null>(null)
+
+  // 1. Join live session RPC on mount
+  useEffect(() => {
+    let isMounted = true
+
+    async function doJoin() {
+      try {
+        setJoining(true)
+        const res = await joinLiveSessionAction(initialSession.id)
+        if (isMounted) {
+          setJoinError(null)
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          console.error('Join error:', err)
+          setJoinError(err?.message || 'Hindi makasali sa sesyon.')
+        }
+      } finally {
+        if (isMounted) {
+          setJoining(false)
+        }
+      }
+    }
+
+    doJoin()
+
+    return () => {
+      isMounted = false
+    }
+  }, [initialSession.id])
+
+  // 2. Fetch & Subscribe to participant info (to detect kick and score)
+  const refreshParticipant = useCallback(async () => {
+    try {
+      const { data: p, error } = await supabase
+        .from('live_session_participants')
+        .select('*')
+        .eq('session_id', initialSession.id)
+        .eq('student_id', currentUserId)
+        .maybeSingle()
+
+      if (p) {
+        setMyParticipant(p as LiveSessionParticipant)
+        if (p.removed_at) {
+          setIsRemoved(true)
+        }
+
+        // If group mode, fetch group details
+        if (p.group_id) {
+          const { data: g } = await supabase
+            .from('live_session_groups')
+            .select(`
+              *,
+              leader:leader_id (
+                id,
+                full_name,
+                avatar_url
+              )
+            `)
+            .eq('id', p.group_id)
+            .single()
+
+          if (g) setMyGroup(g as LiveSessionGroup)
+
+          // Fetch fellow group members
+          const { data: members } = await supabase
+            .from('live_session_participants')
+            .select(`
+              *,
+              profiles (
+                full_name,
+                avatar_url
+              )
+            `)
+            .eq('session_id', initialSession.id)
+            .eq('group_id', p.group_id)
+            .is('removed_at', null)
+
+          if (members) setGroupMembers(members as LiveSessionParticipant[])
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching participant state:', err)
+    }
+  }, [initialSession.id, currentUserId, supabase])
+
+  useEffect(() => {
+    refreshParticipant()
+
+    const channel = supabase.channel(`student-p-${initialSession.id}-${currentUserId}`)
+    channel
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'live_session_participants',
+          filter: `session_id=eq.${initialSession.id}`
+        },
+        () => {
+          refreshParticipant()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'live_session_groups',
+          filter: `session_id=eq.${initialSession.id}`
+        },
+        () => {
+          refreshParticipant()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [initialSession.id, currentUserId, supabase, refreshParticipant])
+
+  // 3. Fetch existing submitted answer when current question changes
+  useEffect(() => {
+    if (!currentQuestion) {
+      setMyAnswer(null)
+      setSubmissionResult(null)
+      return
+    }
+
+    const activeQuestionId = currentQuestion.id
+    let isMounted = true
+    async function checkExistingAnswer() {
+      try {
+        let query = supabase
+          .from('live_session_answers')
+          .select('*')
+          .eq('session_id', initialSession.id)
+          .eq('question_id', activeQuestionId)
+
+        if (initialSession.mode === 'group' && myParticipant?.group_id) {
+          query = query.eq('group_id', myParticipant.group_id)
+        } else {
+          query = query.eq('student_id', currentUserId)
+        }
+
+        const { data: existing } = await query.maybeSingle()
+
+        if (isMounted && existing) {
+          setMyAnswer(existing.answer)
+          setSubmissionResult({
+            isCorrect: existing.is_correct,
+            points: existing.points_awarded
+          })
+        } else if (isMounted) {
+          setMyAnswer(null)
+          setSubmissionResult(null)
+        }
+      } catch (err) {
+        console.error('Error checking existing answer:', err)
+      }
+    }
+
+    checkExistingAnswer()
+
+    return () => {
+      isMounted = false
+    }
+  }, [currentQuestion, initialSession.id, initialSession.mode, myParticipant?.group_id, currentUserId, supabase])
+
+  // 4. Handle Answer Submission
+  const handleSubmitAnswer = async (answerText: string) => {
+    if (!currentQuestion) return
+
+    const res = await submitAnswerAction(initialSession.id, currentQuestion.id, answerText)
+    setMyAnswer(answerText)
+    setSubmissionResult({
+      isCorrect: res.is_correct,
+      points: res.points_awarded
+    })
+
+    if (res.is_correct) {
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.8 }
+      })
+    }
+  }
+
+  // Render Kicked / Removed Screen
+  if (isRemoved) {
+    return (
+      <div className="bg-white rounded-3xl p-8 border border-rose-200 shadow-2xl text-center max-w-md mx-auto my-12 space-y-6 animate-fade-in">
+        <div className="w-16 h-16 rounded-3xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-md">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-heading font-black text-rose-900 mb-1">
+            <Translate fil="Inalis sa Sesyon" en="Removed from Session" />
+          </h2>
+          <p className="text-slate-600 text-sm font-medium leading-relaxed">
+            <Translate
+              fil="Inalis ka ng guro mula sa Live Session na ito. Hindi ka na makakapagsumite o makakapanood."
+              en="You have been removed from this live session by the educator. You can no longer submit or participate."
+            />
+          </p>
+        </div>
+        <Link
+          href={`/student/classrooms/${classroomId}`}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-extrabold text-xs rounded-full shadow-md"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <Translate fil="Bumalik sa Silid-aralan" en="Back to Classroom" />
+        </Link>
+      </div>
+    )
+  }
+
+  // Render Join Error (e.g. Capacity Full)
+  if (joinError) {
+    return (
+      <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center max-w-md mx-auto my-12 space-y-6 animate-fade-in">
+        <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-md">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-heading font-black text-slate-900 mb-1">
+            <Translate fil="Hindi Makasali" en="Unable to Join" />
+          </h2>
+          <p className="text-slate-600 text-sm font-medium leading-relaxed">
+            {joinError}
+          </p>
+        </div>
+        <Link
+          href={`/student/classrooms/${classroomId}`}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-brand-primary text-white font-extrabold text-xs rounded-full shadow-md"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <Translate fil="Bumalik sa Silid-aralan" en="Back to Classroom" />
+        </Link>
+      </div>
+    )
+  }
+
+  // Render Loading
+  if (joining || sessionLoading) {
+    return (
+      <div className="py-24 text-center space-y-4 animate-fade-in">
+        <Loader2 className="w-10 h-10 text-brand-primary animate-spin mx-auto" />
+        <p className="text-slate-600 font-extrabold text-base">
+          <Translate fil="Sumasali sa Live Session..." en="Joining Live Session..." />
+        </p>
+      </div>
+    )
+  }
+
+  const currentStatus = session?.status || initialSession.status
+  const isLobby = currentStatus === 'setup' || currentStatus === 'lobby'
+  const isLive = currentStatus === 'question' || currentStatus === 'reveal'
+  const isEnded = currentStatus === 'ended'
+
+  // Role permissions
+  const isGroupMode = session?.mode === 'group'
+  const isLeader = !isGroupMode || (myGroup && myGroup.leader_id === currentUserId)
+  const isQuestionRevealed = !!(
+    currentQuestion?.revealed_at ||
+    session?.results_revealed_at ||
+    (session?.reveal_mode === 'auto_per_question' && currentStatus === 'reveal')
+  )
+
+  const seedKey = isGroupMode && myParticipant?.group_id ? myParticipant.group_id : currentUserId
+
+  return (
+    <div className="space-y-6">
+      {/* Top Header Card */}
+      <div className="bg-white rounded-3xl p-5 md:p-6 border border-slate-200 shadow-md flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-brand-light text-brand-primary flex items-center justify-center font-bold shadow-xs">
+            {userAvatar ? (
+              <img src={userAvatar} alt="" className="w-full h-full object-cover rounded-2xl" />
+            ) : (
+              userName.charAt(0).toUpperCase()
+            )}
+          </div>
+          <div>
+            <h1 className="text-base md:text-lg font-heading font-black text-slate-900 leading-tight">
+              {userName}
+            </h1>
+            <p className="text-xs font-bold text-slate-500">
+              {classroomName} • {isGroupMode ? myGroup?.label || 'Walang Pangkat' : 'Indibidwal'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isGroupMode && isLeader && (
+            <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-black flex items-center gap-1">
+              <Crown className="w-3.5 h-3.5 fill-amber-400 text-amber-600" />
+              Lider
+            </span>
+          )}
+          <span className="px-3.5 py-1.5 bg-brand-primary/10 text-brand-primary font-heading font-black text-sm rounded-full">
+            ⭐ {myParticipant?.total_score || 0} pts
+          </span>
+        </div>
+      </div>
+
+      {/* ================= LOBBY PHASE ================= */}
+      {isLobby && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Waiting for host banner */}
+          <div className="bg-linear-to-br from-brand-primary to-brand-secondary text-white rounded-3xl p-8 shadow-xl text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center mx-auto shadow-inner animate-bounce">
+              <Clock className="w-7 h-7 text-white" />
+            </div>
+
+            <div>
+              <h2 className="text-2xl md:text-3xl font-heading font-black">
+                <Translate fil="Nasa Lobby Ka Na!" en="You're in the Lobby!" />
+              </h2>
+              <p className="text-white/80 text-sm font-medium mt-1 max-w-md mx-auto">
+                <Translate
+                  fil="Naghihintay sa guro na simulan ang live na sesyon. Ihanda ang iyong sarili!"
+                  en="Waiting for the educator to start the live session. Get ready!"
+                />
+              </p>
+            </div>
+          </div>
+
+          {/* If group mode: Show Group Roster & Voting Panel */}
+          {isGroupMode && myGroup && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <GroupRoster
+                group={myGroup}
+                members={groupMembers}
+                currentUserId={currentUserId}
+              />
+
+              <LeaderVotePanel
+                sessionId={initialSession.id}
+                group={myGroup}
+                members={groupMembers}
+                currentUserId={currentUserId}
+                isHost={false}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ================= LIVE QUESTION PHASE ================= */}
+      {isLive && currentQuestion && (
+        <div className="space-y-6 animate-fade-in">
+          <QuestionCard
+            question={currentQuestion}
+            pacing={session?.pacing || 'manual'}
+            startedAt={session?.question_started_at}
+            serverOffset={serverOffset}
+            randomizeChoices={session?.randomize_choices}
+            seedKey={seedKey}
+            isRevealed={isQuestionRevealed}
+            canSubmit={isLeader}
+            isGroupMode={isGroupMode}
+            leaderName={myGroup?.leader?.full_name || undefined}
+            myAnswer={myAnswer}
+            submittedResult={submissionResult}
+            readOnly={false}
+            onSubmit={handleSubmitAnswer}
+          />
+
+          {/* First correct answer highlight badge */}
+          {isQuestionRevealed && (
+            <div className="text-center animate-slide-up">
+              <FirstCorrectBadge
+                sessionId={initialSession.id}
+                questionId={currentQuestion.id}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ================= ENDED PHASE ================= */}
+      {isEnded && (
+        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center space-y-6 animate-fade-in">
+          <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-md">
+            <Trophy className="w-8 h-8" />
+          </div>
+
+          <div>
+            <h2 className="text-2xl md:text-3xl font-heading font-black text-slate-900 mb-1">
+              <Translate fil="Tapos na ang Pagsusulit!" en="Session Completed!" />
+            </h2>
+            <p className="text-slate-500 text-sm font-medium">
+              {session?.reveal_mode === 'end_of_session' && !session.results_revealed_at ? (
+                <Translate
+                  fil="Naghihintay sa guro na ilahad ang pinal na resulta at talaan ng marka..."
+                  en="Waiting for educator to reveal the final results and leaderboard..."
+                />
+              ) : (
+                <Translate
+                  fil="Narito ang pinal na resulta at talaan ng marka para sa lahat:"
+                  en="Here are the final results and leaderboard standings:"
+                />
+              )}
+            </p>
+          </div>
+
+          <div className="text-left max-w-xl mx-auto">
+            <LiveLeaderboard
+              sessionId={initialSession.id}
+              mode={session?.mode}
+              revealMode={session?.reveal_mode}
+              resultsRevealedAt={session?.results_revealed_at}
+              isHost={false}
+              currentUserId={currentUserId}
+            />
+          </div>
+
+          <div className="pt-4">
+            <Link
+              href={`/student/classrooms/${classroomId}/live/${initialSession.id}/results`}
+              className="px-8 py-3.5 bg-brand-primary hover:bg-brand-secondary text-white font-extrabold text-sm rounded-full shadow-lg transition-all inline-flex items-center gap-2"
+            >
+              <Trophy className="w-4 h-4" />
+              <Translate fil="Tingnan ang Detalyadong Resulta" en="View Detailed Results" />
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

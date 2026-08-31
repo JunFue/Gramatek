@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, Users, BarChart3, FileQuestion, LogOut, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { LayoutDashboard, Users, BarChart3, FileQuestion, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react'
 import { SignOutButton } from '@/components/SignOutButton'
 import { Translate } from '@/components/Translate'
 import { SidebarNotification } from '@/components/SidebarNotification'
@@ -48,7 +49,7 @@ export function EducatorSidebar({ profile }: EducatorSidebarProps) {
 
       {/* Navigation & Sidebar Actions */}
       <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-2 overflow-x-hidden pt-6">
-        <NavLink href="/educator" icon={LayoutDashboard} isCollapsed={isCollapsed}>
+        <NavLink href="/educator" icon={LayoutDashboard} isCollapsed={isCollapsed} exact>
           <Translate fil="Dashboard" en="Dashboard" />
         </NavLink>
         <NavLink href="/educator/classrooms" icon={Users} isCollapsed={isCollapsed}>
@@ -57,7 +58,7 @@ export function EducatorSidebar({ profile }: EducatorSidebarProps) {
         <NavLink href="/educator/analytics" icon={BarChart3} isCollapsed={isCollapsed}>
           <Translate fil="Analitika" en="Analytics" />
         </NavLink>
-        <NavLink href="/educator/quizzes/new" icon={FileQuestion} isCollapsed={isCollapsed} highlight>
+        <NavLink href="/educator/quizzes/new" icon={FileQuestion} isCollapsed={isCollapsed}>
           <Translate fil="Gawa ng Pagsusulit" en="Create Quiz" />
         </NavLink>
 
@@ -91,19 +92,42 @@ export function EducatorSidebar({ profile }: EducatorSidebarProps) {
   )
 }
 
-function NavLink({ href, icon: Icon, children, isCollapsed, highlight = false }: any) {
+function NavLink({ 
+  href, 
+  icon: Icon, 
+  children, 
+  isCollapsed, 
+  exact = false 
+}: { 
+  href: string
+  icon: any
+  children: React.ReactNode
+  isCollapsed: boolean
+  exact?: boolean 
+}) {
+  const pathname = usePathname()
+  
+  const isActive = exact 
+    ? pathname === href 
+    : (href === '/educator/quizzes/new' ? pathname.startsWith('/educator/quizzes') : pathname.startsWith(href))
+
   return (
     <Link 
       href={href} 
-      className={`flex items-center gap-3 py-3 rounded-xl transition-colors group font-medium mx-4 ${
-        highlight 
-          ? 'bg-brand-accent text-brand-primary font-bold' 
+      className={`relative flex items-center gap-3 py-3 rounded-2xl transition-all duration-200 group font-extrabold mx-3 ${
+        isActive 
+          ? 'bg-white text-brand-primary shadow-lg shadow-black/10 ring-2 ring-white/30 translate-x-1' 
           : 'hover:bg-white/10 text-white/70 hover:text-white'
-      } ${isCollapsed ? 'px-0 justify-center' : 'px-4'}`}
-      title={isCollapsed ? (typeof children === 'string' ? children : 'Link') : undefined}
+      } ${isCollapsed ? 'px-0 justify-center mx-2' : 'px-4'}`}
+      title={isCollapsed ? (typeof children === 'string' ? children : undefined) : undefined}
     >
-      <Icon className={`w-5 h-5 shrink-0 transition-colors`} />
-      {!isCollapsed && <span className="whitespace-nowrap">{children}</span>}
+      {/* Active Left Indicator Pill */}
+      {isActive && (
+        <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-brand-secondary rounded-full" />
+      )}
+      <Icon className={`w-5 h-5 shrink-0 transition-all duration-200 ${isActive ? 'text-brand-primary scale-110' : 'group-hover:scale-105'}`} />
+      {!isCollapsed && <span className="whitespace-nowrap font-black text-sm">{children}</span>}
     </Link>
   )
 }
+

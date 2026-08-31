@@ -8,17 +8,37 @@ export function NavigationProgressBar() {
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [opacity, setOpacity] = useState(1)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const fadeTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const resetTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const clearAllTimers = () => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
+  }
 
   // When pathname or searchParams change, route transition is done
   useEffect(() => {
     if (loading) {
+      if (timerRef.current) clearInterval(timerRef.current)
+      
+      // Step 1: Animate all the way to 100% width while remaining completely visible
       setProgress(100)
-      const timeout = setTimeout(() => {
-        setLoading(false)
-        setProgress(0)
+      setOpacity(1)
+
+      // Step 2: Once it reaches 100% (after 250ms), start fading out
+      fadeTimerRef.current = setTimeout(() => {
+        setOpacity(0)
+
+        // Step 3: Once faded out (after 300ms), reset state
+        resetTimerRef.current = setTimeout(() => {
+          setLoading(false)
+          setProgress(0)
+          setOpacity(1)
+        }, 300)
       }, 250)
-      return () => clearTimeout(timeout)
     }
   }, [pathname, searchParams])
 
@@ -38,8 +58,7 @@ export function NavigationProgressBar() {
         href.startsWith('tel:') ||
         target.target === '_blank' ||
         target.hasAttribute('download') ||
-        href.startsWith('http://') ||
-        href.startsWith('https://') && !href.startsWith(window.location.origin)
+        (href.startsWith('http') && !href.startsWith(window.location.origin))
       ) {
         return
       }
@@ -56,19 +75,20 @@ export function NavigationProgressBar() {
     }
 
     const startProgress = () => {
-      if (timerRef.current) clearInterval(timerRef.current)
+      clearAllTimers()
+      setOpacity(1)
       setLoading(true)
       setProgress(25)
 
       let current = 25
       timerRef.current = setInterval(() => {
-        current += Math.random() * 15
-        if (current > 88) {
-          current = 88
+        current += (92 - current) * 0.15 + Math.random() * 4
+        if (current > 92) {
+          current = 92
           if (timerRef.current) clearInterval(timerRef.current)
         }
         setProgress(current)
-      }, 150)
+      }, 100)
     }
 
     document.addEventListener('click', handleLinkClick, { capture: true })
@@ -77,27 +97,29 @@ export function NavigationProgressBar() {
     return () => {
       document.removeEventListener('click', handleLinkClick, { capture: true })
       window.removeEventListener('gramatek-nav-start', handleCustomStart)
-      if (timerRef.current) clearInterval(timerRef.current)
+      clearAllTimers()
     }
   }, [])
 
   if (!loading && progress === 0) return null
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9999] pointer-events-none">
+    <div className="fixed top-0 left-0 right-0 z-[9999] pointer-events-none w-full h-[3px]">
       <div 
-        className="h-1 bg-gradient-to-r from-brand-secondary via-brand-primary to-amber-400 shadow-[0_0_12px_rgba(49,105,78,0.7)] transition-all duration-200 ease-out"
+        className="h-full bg-gradient-to-r from-emerald-500 via-brand-primary to-amber-400 shadow-[0_0_10px_rgba(49,105,78,0.8),0_0_5px_rgba(234,179,8,0.6)]"
         style={{ 
           width: `${progress}%`,
-          opacity: progress === 100 ? 0 : 1,
-          transitionProperty: 'width, opacity'
+          opacity: opacity,
+          transition: progress === 100 
+            ? 'width 250ms ease-out, opacity 300ms ease-in' 
+            : 'width 200ms ease-out, opacity 150ms ease'
         }}
       />
-      {/* Animated glow head */}
-      {loading && progress < 100 && (
+      {/* Trailing ambient glow head */}
+      {loading && opacity > 0 && progress < 100 && (
         <div 
-          className="absolute top-0 w-24 h-1 bg-white/60 blur-xs transition-all duration-200"
-          style={{ left: `calc(${progress}% - 96px)` }}
+          className="absolute top-0 w-28 h-full bg-white/70 blur-xs transition-all duration-200"
+          style={{ left: `calc(${progress}% - 112px)` }}
         />
       )}
     </div>
@@ -109,3 +131,4 @@ export function triggerNavigationProgress() {
     window.dispatchEvent(new CustomEvent('gramatek-nav-start'))
   }
 }
+

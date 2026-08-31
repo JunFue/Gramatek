@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { 
   Users, FileQuestion, ArrowLeft, Plus, Settings, RefreshCw, 
   Star, AlertTriangle, UserMinus, CheckCircle2, X, Edit3, 
-  Loader2
+  Loader2, Zap
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -255,13 +255,22 @@ export function ClassroomManagerClient({ classroom, quizzes }: ClassroomManagerC
                 {quizzes.length}
               </span>
             </h2>
-            <Link 
-              href={`/educator/quizzes/new?classroom=${classroom.id}`} 
-              className="px-4 py-2 bg-brand-primary hover:bg-slate-600 text-white text-xs md:text-sm font-black rounded-full transition-all flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              <Translate fil="Gumawa ng Pagsusulit" en="Create Quiz" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link 
+                href={`/educator/classrooms/${classroom.id}/live/setup`} 
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs md:text-sm font-black rounded-full transition-all flex items-center gap-1.5 shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
+              >
+                <Zap className="w-4 h-4 fill-amber-200" />
+                <Translate fil="Mag-Live Session" en="Live Session" />
+              </Link>
+              <Link 
+                href={`/educator/quizzes/new?classroom=${classroom.id}`} 
+                className="px-4 py-2 bg-brand-primary hover:bg-slate-600 text-white text-xs md:text-sm font-black rounded-full transition-all flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                <Translate fil="Gumawa ng Pagsusulit" en="Create Quiz" />
+              </Link>
+            </div>
           </div>
 
           {quizzes && quizzes.length > 0 ? (

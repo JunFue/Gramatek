@@ -26,7 +26,7 @@ export default async function LandingPage({
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
     if (!profile || !profile.role) {
       redirect('/onboarding')
