@@ -96,8 +96,13 @@ export function SetupWizardClient({
 
     startTransition(async () => {
       try {
-        const questionIds = selectedCards.map((c) => c.id)
-        const timeLimits = selectedCards.map((c) => cardTimeOverrides[c.id] || defaultTimeLimit)
+        const questionsPayload = selectedCards.map((c) => ({
+          id: c.id,
+          prompt: c.question_text,
+          choices: c.options || [],
+          correct_answer: c.correct_answer,
+          time_limit_seconds: cardTimeOverrides[c.id] || defaultTimeLimit
+        }))
 
         const res = await createLiveSessionAction({
           classroom_id: classroomId,
@@ -108,8 +113,7 @@ export function SetupWizardClient({
           randomize_choices: randomizeChoices,
           randomize_question_order: randomizeQuestions,
           reveal_mode: revealMode,
-          question_ids: questionIds,
-          per_question_time_limits: timeLimits
+          questions: questionsPayload
         })
 
         if (res.success && res.sessionId) {

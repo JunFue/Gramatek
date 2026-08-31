@@ -3,6 +3,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+export interface LiveQuestionInput {
+  id?: string
+  prompt: string
+  choices: unknown
+  correct_answer: string | number
+  time_limit_seconds?: number | null
+}
+
 export async function createLiveSessionAction(formData: {
   classroom_id: string
   mode: 'individual' | 'group'
@@ -12,8 +20,9 @@ export async function createLiveSessionAction(formData: {
   randomize_choices: boolean
   randomize_question_order: boolean
   reveal_mode: 'auto_per_question' | 'manual_per_question' | 'end_of_session'
-  question_ids: string[]
+  question_ids?: string[]
   per_question_time_limits?: number[]
+  questions?: LiveQuestionInput[]
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -36,8 +45,47 @@ export async function createLiveSessionAction(formData: {
     throw new Error(sessionErr?.message || 'Failed to create live session')
   }
 
-  // 2. Add Questions
-  if (formData.question_ids && formData.question_ids.length > 0) {
+  // 2. Add Questions directly to live_session_questions
+  if (formData.questions && formData.questions.length > 0) {
+    let questionsList = [...formData.questions]
+    if (formData.randomize_question_order) {
+      questionsList = questionsList.sort(() => Math.random() - 0.5)
+    }
+
+    const rows = questionsList.map((q, idx) => {
+      let normalizedCorrectAnswer = String(q.correct_answer ?? '')
+      if (Array.isArray(q.choices) && typeof q.correct_answer === 'number') {
+        const choiceAtIdx = q.choices[q.correct_answer]
+        if (typeof choiceAtIdx === 'string') {
+          normalizedCorrectAnswer = choiceAtIdx
+        } else if (choiceAtIdx && typeof choiceAtIdx === 'object') {
+          const cObj = choiceAtIdx as Record<string, unknown>
+          normalizedCorrectAnswer = String(cObj.text || cObj.label || cObj.option || q.correct_answer)
+        }
+      }
+
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(q.id || '')
+
+      return {
+        session_id: sessionId,
+        source_question_id: isUuid ? q.id : null,
+        order_index: idx,
+        prompt: q.prompt,
+        choices: Array.isArray(q.choices) ? q.choices : [],
+        correct_answer: normalizedCorrectAnswer,
+        time_limit_seconds: q.time_limit_seconds || formData.default_time_limit_seconds || 30
+      }
+    })
+
+    const { error: qErr } = await supabase
+      .from('live_session_questions')
+      .insert(rows)
+
+    if (qErr) {
+      console.error('Failed to insert live session questions:', qErr)
+      throw new Error(qErr?.message || 'Failed to add questions')
+    }
+  } else if (formData.question_ids && formData.question_ids.length > 0) {
     const { error: qErr } = await supabase.rpc('add_questions_to_session', {
       p_session_id: sessionId,
       p_source_question_ids: formData.question_ids,
