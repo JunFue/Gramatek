@@ -73,7 +73,11 @@ export function StudentLivePlayerClient({
         setJoining(true)
         const res = await joinLiveSessionAction(initialSession.id)
         if (isMounted) {
-          setJoinError(null)
+          if (res?.error) {
+            setJoinError(res.error)
+          } else {
+            setJoinError(null)
+          }
         }
       } catch (err: any) {
         if (isMounted) {
@@ -282,24 +286,62 @@ export function StudentLivePlayerClient({
     )
   }
 
-  // Render Join Error (e.g. Capacity Full)
+  // Render Join Error (e.g. Session Already Started, Capacity Full, Not Enrolled)
   if (joinError) {
+    const errorLower = joinError.toLowerCase()
+    const isStarted = errorLower.includes('already started')
+    const isCapacityFull = errorLower.includes('capacity')
+    const isNotEnrolled = errorLower.includes('enrolled') || errorLower.includes('classroom')
+    const isRemovedUser = errorLower.includes('removed')
+
     return (
       <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center max-w-md mx-auto my-12 space-y-6 animate-fade-in">
         <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-md">
           <AlertCircle className="w-8 h-8" />
         </div>
-        <div>
-          <h2 className="text-2xl font-heading font-black text-slate-900 mb-1">
-            <Translate fil="Hindi Makasali" en="Unable to Join" />
+        <div className="space-y-2">
+          <h2 className="text-2xl font-heading font-black text-slate-900 leading-tight">
+            {isStarted ? (
+              <Translate fil="Nagsimula na ang Sesyon" en="Session Already In Progress" />
+            ) : isCapacityFull ? (
+              <Translate fil="Puno na ang Sesyon" en="Session is Full" />
+            ) : isNotEnrolled ? (
+              <Translate fil="Hindi Nakatala sa Silid-aralan" en="Not Enrolled in Classroom" />
+            ) : isRemovedUser ? (
+              <Translate fil="Inalis sa Sesyon" en="Removed from Session" />
+            ) : (
+              <Translate fil="Hindi Makasali sa Sesyon" en="Unable to Join Session" />
+            )}
           </h2>
           <p className="text-slate-600 text-sm font-medium leading-relaxed">
-            {joinError}
+            {isStarted ? (
+              <Translate
+                fil="Kasalukuyan nang naglalaro ang klase sa Live Session na ito at sarado na ang pagsali para sa mga bagong manlalaro. Maghintay sa susunod na laro ng guro."
+                en="This live session is already in progress and is no longer accepting new participants. Please wait for the educator's next session."
+              />
+            ) : isCapacityFull ? (
+              <Translate
+                fil="Naabot na ang pinakamataas na bilang ng mga mag-aaral para sa sesyong ito."
+                en="The maximum participant capacity for this live session has been reached."
+              />
+            ) : isNotEnrolled ? (
+              <Translate
+                fil="Kailangan mong maging opisyal na miyembro ng silid-aralang ito upang makasali sa Live Session."
+                en="You must be an enrolled student in this classroom to join this live session."
+              />
+            ) : isRemovedUser ? (
+              <Translate
+                fil="Inalis ka ng guro mula sa Live Session na ito."
+                en="You have been removed from this live session by the educator."
+              />
+            ) : (
+              joinError
+            )}
           </p>
         </div>
         <Link
           href={`/student/classrooms/${classroomId}`}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-brand-primary text-white font-extrabold text-xs rounded-full shadow-md"
+          className="inline-flex items-center justify-center gap-2 w-full py-3.5 bg-brand-primary hover:bg-slate-800 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
           <Translate fil="Bumalik sa Silid-aralan" en="Back to Classroom" />

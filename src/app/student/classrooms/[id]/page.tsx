@@ -1,46 +1,61 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Play, BookOpen } from 'lucide-react'
+import { ArrowLeft, Play, BookOpen, Target, CheckCircle2, Award, ChevronRight } from 'lucide-react'
 import { Translate } from '@/components/Translate'
+import { getGradeTier, calculateStudentClassroomSummary } from '@/lib/utils/grading'
 
 export default async function StudentClassroomPage({ params }: { params: Promise<{ id: string }> }) {
- const { id } = await params
- const supabase = await createClient()
- const { data: { user } } = await supabase.auth.getUser()
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
- if (!user) notFound()
+  if (!user) notFound()
 
- // 1. Fetch Classroom Info & Verify Enrollment
- const { data: classroom } = await supabase
- .from('classrooms')
- .select(`
- *,
- profiles!classrooms_educator_id_fkey ( full_name ),
- classroom_members!inner(student_id)
- `)
- .eq('id', id)
- .eq('classroom_members.student_id', user.id)
- .single()
+  // 1. Fetch Classroom Info & Verify Enrollment
+  const { data: classroom } = await supabase
+    .from('classrooms')
+    .select(`
+      *,
+      profiles!classrooms_educator_id_fkey ( full_name ),
+      classroom_members!inner(student_id, joined_at)
+    `)
+    .eq('id', id)
+    .eq('classroom_members.student_id', user.id)
+    .single()
 
- if (!classroom) notFound()
+  if (!classroom) notFound()
 
- // 2. Fetch Quizzes
- const { data: quizzes } = await supabase
- .from('quizzes')
- .select('id, title, description, time_limit_seconds')
- .eq('classroom_id', id)
- .eq('is_published', true)
- .order('created_at', { ascending: false })
+  // 2. Fetch Quizzes
+  const { data: quizzes } = await supabase
+    .from('quizzes')
+    .select('id, title, description, time_limit_seconds')
+    .eq('classroom_id', id)
+    .eq('is_published', true)
+    .order('created_at', { ascending: false })
 
- // 3. Fetch past attempts for this student in this classroom's quizzes
- const { data: attempts } = await supabase
- .from('quiz_attempts')
- .select('*, quizzes!inner(classroom_id)')
- .eq('student_id', user.id)
- .eq('quizzes.classroom_id', id)
+  const validQuizzes = quizzes || []
 
-  // 4. Check for active Live Session
+  // 3. Fetch past attempts for this student in this classroom's quizzes
+  const { data: attempts } = await supabase
+    .from('quiz_attempts')
+    .select('*, quizzes!inner(classroom_id)')
+    .eq('student_id', user.id)
+    .eq('quizzes.classroom_id', id)
+
+  const validAttempts = attempts || []
+
+  // 4. Calculate student progress summary
+  const summary = calculateStudentClassroomSummary(
+    {
+      student_id: user.id,
+      joined_at: classroom.classroom_members?.[0]?.joined_at || new Date().toISOString(),
+    },
+    validQuizzes,
+    validAttempts
+  )
+
+  // 5. Check for active Live Session
   const { data: activeLiveSession } = await supabase
     .from('live_sessions')
     .select('id, status, mode')
@@ -49,6 +64,8 @@ export default async function StudentClassroomPage({ params }: { params: Promise
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
+
+  const tier = summary.overallGradeTier
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto animate-fade-in relative z-10 transition-colors duration-300 space-y-6 sm:space-y-8">
@@ -74,12 +91,13 @@ export default async function StudentClassroomPage({ params }: { params: Promise
       )}
 
       <div>
-        <Link href="/student" className="inline-flex items-center gap-2 text-slate-600 hover:text-brand-primary font-extrabold transition-all hover:-translate-x-1 mb-4 text-xs sm:text-sm">
+        <Link href="/student" className="inline-flex items-center gap-2 text-slate-600 hover:text-brand-primary font-extrabold transition-all hover:-translate-x-1 mb-2 text-xs sm:text-sm">
           <ArrowLeft className="w-4 h-4" />
           <Translate fil="Bumalik sa Dashboard" en="Back to Dashboard" />
         </Link>
       </div>
 
+      {/* Classroom Header Banner */}
       <div className="glass-strong rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-white/80 relative overflow-hidden shadow-xl">
         <div className="absolute top-1/2 right-10 w-48 h-48 bg-brand-accent/20 rounded-full blur-[80px] -translate-y-1/2 pointer-events-none" />
         
@@ -97,26 +115,73 @@ export default async function StudentClassroomPage({ params }: { params: Promise
         </div>
       </div>
 
+      {/* Student Classroom Standing & Grade Card */}
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-brand-primary/20 shadow-md relative overflow-hidden space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Award className="w-4 h-4 text-brand-primary" />
+              <h2 className="text-xs font-black text-brand-primary uppercase tracking-wider">
+                <Translate fil="Aking Katayuan sa Silid na Ito" en="My Standing in this Classroom" />
+              </h2>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-heading font-black text-slate-900">
+              {summary.quizzesCompleted > 0 && tier ? (
+                <span>{summary.averagePercentage}% • {tier.letter} ({tier.labelFil})</span>
+              ) : (
+                <span><Translate fil="Wala Pang Nakatalang Grado" en="No Grades Yet" /></span>
+              )}
+            </h3>
+            <p className="text-slate-500 text-xs sm:text-sm font-semibold mt-1">
+              {summary.quizzesCompleted} sa {summary.totalQuizzes} na pagsusulit ang natapos ({summary.completionRate}%)
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/student/performance?classroom=${id}`}
+              className="px-5 py-2.5 bg-brand-primary hover:bg-slate-700 text-white font-extrabold text-xs sm:text-sm rounded-full shadow-md transition-all flex items-center gap-1.5"
+            >
+              <Translate fil="Detalyadong Ulat ng Grado" en="Detailed Grade Report" />
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+          <div 
+            className="bg-brand-primary h-full rounded-full transition-all duration-500"
+            style={{ width: `${summary.completionRate}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Available Quizzes Grid */}
       <div>
         <h2 className="text-xl sm:text-2xl font-heading font-extrabold text-brand-primary flex items-center gap-2 mb-4 sm:mb-6">
           <span>🎮</span> <Translate fil="Mga May-akdang Pagsusulit" en="Available Quizzes" />
         </h2>
 
-        {quizzes && quizzes.length > 0 ? (
+        {validQuizzes && validQuizzes.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            {quizzes.map((quiz) => {
-              const quizAttempts = attempts?.filter(a => a.quiz_id === quiz.id) || []
-              const bestScore = quizAttempts.length > 0 ? Math.max(...quizAttempts.map(a => a.score)) : null
-              const hasAttempted = quizAttempts.length > 0
+            {validQuizzes.map((quiz) => {
+              const qProg = summary.quizzes[quiz.id]
+              const hasAttempted = qProg?.hasAttempted
+              const qTier = qProg?.gradeTier
 
               return (
                 <div key={quiz.id} className="glass-strong card-hover rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-white/80 flex flex-col relative overflow-hidden group shadow-lg">
                   
                   <div className="flex justify-between items-start mb-2 relative z-10">
-                    <h3 className="text-lg sm:text-xl font-heading font-extrabold text-slate-800 ">{quiz.title}</h3>
-                    {hasAttempted && (
-                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 bg-blue-100 text-blue-700 rounded-full text-[11px] sm:text-xs font-black border border-blue-200 shadow-sm shrink-0">
-                        ⭐ Best: {bestScore} pts
+                    <h3 className="text-lg sm:text-xl font-heading font-extrabold text-slate-800 pr-2">{quiz.title}</h3>
+                    {hasAttempted && qTier ? (
+                      <span className={`px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-black border shadow-xs shrink-0 ${qTier.badgeBg} ${qTier.badgeText} ${qTier.badgeBorder}`}>
+                        ⭐ {qProg.bestScore}/{qProg.maxScore} ({qProg.bestPercentage}% • {qTier.letter})
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 bg-amber-100 text-amber-800 rounded-full text-[11px] sm:text-xs font-black shrink-0">
+                        ⏳ Hindi Pa Nasagutan
                       </span>
                     )}
                   </div>
