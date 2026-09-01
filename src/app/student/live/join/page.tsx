@@ -26,7 +26,7 @@ export default async function StudentLiveJoinPage() {
   const list = classrooms?.map((c: any) => c.classrooms).filter(Boolean) || []
 
   return (
-    <div className="p-6 md:p-12 max-w-xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-6 md:p-12 max-w-xl mx-auto animate-fade-in">
       <StudentJoinFormClient classrooms={list} />
     </div>
   )

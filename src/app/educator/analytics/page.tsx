@@ -42,55 +42,55 @@ export default async function EducatorAnalyticsPage() {
   const avgScore = totalAttempts > 0 ? Math.round(sumPct / totalAttempts) : 0
 
   return (
-    <div className="p-8 max-w-6xl mx-auto animate-fade-in relative z-10">
-      <header className="mb-10">
-        <h1 className="text-3xl font-heading font-bold text-slate-900 mb-2 flex items-center gap-3">
-          <BarChart3 className="w-8 h-8 text-brand-primary" /> <Translate fil="Pandaigdigang Analitika" en="Global Analytics" />
+    <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto animate-fade-in relative z-10 space-y-6 sm:space-y-8 md:space-y-10">
+      <header>
+        <h1 className="text-2xl sm:text-3xl font-heading font-bold text-slate-900 mb-1 sm:mb-2 flex items-center gap-2 sm:gap-3">
+          <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-brand-primary shrink-0" /> <Translate fil="Pandaigdigang Analitika" en="Global Analytics" />
         </h1>
-        <p className="text-slate-600 font-medium"><Translate fil="Pangkalahatang-ideya ng pagganap ng mag-aaral sa lahat ng iyong silid-aralan." en="Overview of student performance across all your classrooms." /></p>
+        <p className="text-slate-600 font-medium text-xs sm:text-sm md:text-base"><Translate fil="Pangkalahatang-ideya ng pagganap ng mag-aaral sa lahat ng iyong silid-aralan." en="Overview of student performance across all your classrooms." /></p>
       </header>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-md relative overflow-hidden">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200 shadow-md relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/10 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
-          <div className="flex items-center gap-4 mb-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
-              <Users className="w-6 h-6 text-slate-500" />
+          <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-4 relative z-10">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-slate-500" />
             </div>
-            <h3 className="text-slate-600 font-bold text-lg"><Translate fil="Kabuuang Mag-aaral" en="Total Students" /></h3>
+            <h3 className="text-slate-600 font-bold text-xs sm:text-lg truncate"><Translate fil="Kabuuang Mag-aaral" en="Total Students" /></h3>
           </div>
-          <p className="text-5xl font-heading font-black text-slate-900 relative z-10">{studentCount || 0}</p>
+          <p className="text-3xl sm:text-5xl font-heading font-black text-slate-900 relative z-10">{studentCount || 0}</p>
         </div>
 
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-md relative overflow-hidden">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200 shadow-md relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/10 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
-          <div className="flex items-center gap-4 mb-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
-              <Target className="w-6 h-6 text-slate-500" />
+          <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-4 relative z-10">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
+              <Target className="w-5 h-5 sm:w-6 sm:h-6 text-slate-500" />
             </div>
-            <h3 className="text-slate-600 font-bold text-lg"><Translate fil="Karaniwang Iskor" en="Avg Score" /></h3>
+            <h3 className="text-slate-600 font-bold text-xs sm:text-lg truncate"><Translate fil="Karaniwang Iskor" en="Avg Score" /></h3>
           </div>
-          <p className="text-5xl font-heading font-black text-slate-900 relative z-10">{avgScore}%</p>
+          <p className="text-3xl sm:text-5xl font-heading font-black text-slate-900 relative z-10">{avgScore}%</p>
         </div>
 
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-md relative overflow-hidden">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200 shadow-md relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
-          <div className="flex items-center gap-4 mb-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center border border-violet-100">
-              <TrendingUp className="w-6 h-6 text-violet-500" />
+          <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-4 relative z-10">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-violet-50 flex items-center justify-center border border-violet-100 shrink-0">
+              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-violet-500" />
             </div>
-            <h3 className="text-slate-600 font-bold text-lg"><Translate fil="Kabuuang Pagtatangka" en="Total Attempts" /></h3>
+            <h3 className="text-slate-600 font-bold text-xs sm:text-lg truncate"><Translate fil="Kabuuang Pagtatangka" en="Total Attempts" /></h3>
           </div>
-          <p className="text-5xl font-heading font-black text-slate-900 relative z-10">{totalAttempts}</p>
+          <p className="text-3xl sm:text-5xl font-heading font-black text-slate-900 relative z-10">{totalAttempts}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
         
         {/* Recent Activity Feed */}
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
-          <h2 className="text-xl font-heading font-bold text-slate-900 mb-6"><Translate fil="Mga Huling Aktibidad" en="Recent Activity" /></h2>
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200 shadow-sm">
+          <h2 className="text-lg sm:text-xl font-heading font-bold text-slate-900 mb-4 sm:mb-6"><Translate fil="Mga Huling Aktibidad" en="Recent Activity" /></h2>
           
           <div className="space-y-4">
             {validAttempts.slice(0, 5).map(attempt => {

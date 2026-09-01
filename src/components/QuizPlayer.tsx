@@ -872,31 +872,31 @@ export function QuizPlayer({
              </button>
            </div>
          ) : (
-           <div className="w-full max-w-3xl bg-white rounded-3xl p-6 md:p-12 border border-slate-200 shadow-xl relative animate-slide-up" key={currentIdx}>
-             
-             {/* Question Badge / Points Indicator */}
-             <div className="flex items-center justify-between mb-6">
-               <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-extrabold uppercase tracking-wider border border-slate-200">
-                 {card?.question_type === 'multiple_choice' && <Translate fil="Pagpipilian (Multiple Choice)" en="Multiple Choice" />}
-                 {card?.question_type === 'fill_blank' && <Translate fil="Punan ang Patlang" en="Fill in the Blank" />}
-                 {card?.question_type === 'enumeration' && <Translate fil="Enumerasyon (Listahan)" en="Enumeration" />}
-                 {card?.question_type === 'word_scramble' && <Translate fil="Ayusin ang Titik (Word Scramble)" en="Word Scramble" />}
-                 {card?.question_type === 'true_false' && <Translate fil="Tama o Mali (True or False)" en="True or False" />}
-                 {card?.question_type === 'sentence_scramble' && <Translate fil="Ayusin ang Pangungusap" en="Sentence Unscramble" />}
-               </span>
-               <span className="text-xs font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                 +{currentCardPoints} <Translate fil="puntos" en="pts" />
-               </span>
-             </div>
+            <div className="w-full max-w-3xl bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 border border-slate-200 shadow-xl relative animate-slide-up" key={currentIdx}>
+              
+              {/* Question Badge / Points Indicator */}
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <span className="px-2.5 sm:px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] sm:text-xs font-extrabold uppercase tracking-wider border border-slate-200">
+                  {card?.question_type === 'multiple_choice' && <Translate fil="Pagpipilian (Multiple Choice)" en="Multiple Choice" />}
+                  {card?.question_type === 'fill_blank' && <Translate fil="Punan ang Patlang" en="Fill in the Blank" />}
+                  {card?.question_type === 'enumeration' && <Translate fil="Enumerasyon (Listahan)" en="Enumeration" />}
+                  {card?.question_type === 'word_scramble' && <Translate fil="Ayusin ang Titik (Word Scramble)" en="Word Scramble" />}
+                  {card?.question_type === 'true_false' && <Translate fil="Tama o Mali (True or False)" en="True or False" />}
+                  {card?.question_type === 'sentence_scramble' && <Translate fil="Ayusin ang Pangungusap" en="Sentence Unscramble" />}
+                </span>
+                <span className="text-xs font-black text-amber-600 bg-amber-50 px-2.5 sm:px-3 py-1 rounded-full border border-amber-200">
+                  +{currentCardPoints} <Translate fil="puntos" en="pts" />
+                </span>
+              </div>
 
-             {/* Question Text */}
-             <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-8 text-center leading-relaxed font-heading">
-               {card?.question_text}
-             </h2>
+              {/* Question Text */}
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-900 mb-6 sm:mb-8 text-center leading-relaxed font-heading">
+                {card?.question_text}
+              </h2>
 
              {/* 1. Multiple Choice Options */}
              {card?.question_type === 'multiple_choice' && card.options && (
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                  {card.options.map((opt: string, idx: number) => {
                    let btnClass = "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800 shadow-xs"
                    if (selectedAnswer === idx) {
@@ -923,7 +923,7 @@ export function QuizPlayer({
                          setSelectedAnswer(idx)
                          persistActiveInputs(currentIdx, false)
                        }}
-                       className={`p-5 md:p-6 rounded-2xl border text-left text-base md:text-lg font-semibold transition-all duration-200 focus:outline-none flex items-center justify-between cursor-pointer ${btnClass}`}
+                       className={`p-4 sm:p-5 md:p-6 rounded-2xl border text-left text-sm sm:text-base md:text-lg font-semibold transition-all duration-200 focus:outline-none flex items-center justify-between cursor-pointer ${btnClass}`}
                      >
                        <span>{opt}</span>
                        <span className="w-7 h-7 rounded-xl border border-slate-300 flex items-center justify-center text-xs font-black text-slate-500 shrink-0 ml-3">

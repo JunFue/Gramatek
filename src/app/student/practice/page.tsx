@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { PREBUILT_QUIZZES } from '@/lib/data/filipino-trivia'
@@ -37,17 +37,17 @@ export default function PracticeHub() {
   const totalPossiblePoints = PREBUILT_QUIZZES.reduce((sum, q) => sum + q.total_points, 0)
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-10 pb-24 text-slate-900 transition-colors duration-300">
+    <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto space-y-6 sm:space-y-8 md:space-y-10 pb-16 text-slate-900 transition-colors duration-300">
       
       {/* Header Banner */}
-      <div className="text-center relative z-10 space-y-4">
-        <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-brand-light text-brand-primary font-extrabold text-xs tracking-wider uppercase border border-brand-primary/20 shadow-sm">
-          <Sparkles className="w-4 h-4 text-brand-primary" /> <Translate fil="Pagsasanay at Laro" en="Practice and Play" />
+      <div className="text-center relative z-10 space-y-3 sm:space-y-4">
+        <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-brand-light text-brand-primary font-extrabold text-xs tracking-wider uppercase border border-brand-primary/20 shadow-sm">
+          <Sparkles className="w-3.5 h-3.5 text-brand-primary" /> <Translate fil="Pagsasanay at Laro" en="Practice and Play" />
         </span>
-        <h1 className="text-4xl md:text-5xl font-heading font-black tracking-tight text-slate-900">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-heading font-black tracking-tight text-slate-900">
           <Translate fil="Mga Palarong" en="Ready" /> <span className="text-brand-primary"><Translate fil="Handa 🎮" en="Games 🎮" /></span>
         </h1>
-        <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto font-semibold leading-relaxed">
+        <p className="text-sm sm:text-base md:text-xl text-slate-600 max-w-2xl mx-auto font-semibold leading-relaxed">
           <Translate 
             fil="Himayin ang yaman ng wikang Filipino. Tapusin ang Antas 1 upang mabuksan ang susunod na antas!" 
             en="Explore the richness of the Filipino language. Complete Level 1 to unlock the next level!" 
@@ -55,18 +55,18 @@ export default function PracticeHub() {
         </p>
 
         {/* Overall Progress Capsule */}
-        <div className="inline-flex items-center gap-6 bg-white px-6 py-3 rounded-2xl border border-slate-200 shadow-md">
+        <div className="inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-6 bg-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl border border-slate-200 shadow-md">
           <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-500" />
-            <span className="text-sm font-bold text-slate-700">
-              <Translate fil="Kabuuang Puntos" en="Total Points" />: <strong className="text-brand-primary text-base">{totalEarnedPoints}</strong> / {totalPossiblePoints}
+            <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
+            <span className="text-xs sm:text-sm font-bold text-slate-700">
+              <Translate fil="Kabuuang Puntos" en="Total Points" />: <strong className="text-brand-primary text-sm sm:text-base">{totalEarnedPoints}</strong> / {totalPossiblePoints}
             </span>
           </div>
-          <div className="h-4 w-px bg-slate-200" />
+          <div className="hidden sm:block h-4 w-px bg-slate-200" />
           <div className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-emerald-600" />
-            <span className="text-sm font-bold text-slate-700">
-              <Translate fil="Natapos na Antas" en="Completed Levels" />: <strong className="text-emerald-700 text-base">{Object.keys(completed).length}</strong> / 3
+            <Award className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+            <span className="text-xs sm:text-sm font-bold text-slate-700">
+              <Translate fil="Natapos na Antas" en="Completed Levels" />: <strong className="text-emerald-700 text-sm sm:text-base">{Object.keys(completed).length}</strong> / 3
             </span>
           </div>
         </div>
@@ -74,28 +74,28 @@ export default function PracticeHub() {
 
       {/* Game Mode Selector */}
       <div className="flex flex-col items-center">
-        <div className="bg-white p-2 rounded-2xl flex items-center shadow-md border border-slate-200 gap-2">
+        <div className="bg-white p-1.5 sm:p-2 rounded-2xl flex items-center shadow-md border border-slate-200 gap-1.5 sm:gap-2 w-full max-w-md sm:w-auto">
           <button 
             onClick={() => setSelectedMode('mastery')}
-            className={`px-6 md:px-8 py-3 rounded-xl font-extrabold transition-all flex items-center gap-2 ${
-              selectedMode === 'mastery' ? 'bg-brand-primary text-white shadow-md scale-105' : 'text-slate-500 hover:bg-slate-50'
+            className={`flex-1 sm:flex-initial px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
+              selectedMode === 'mastery' ? 'bg-brand-primary text-white shadow-md scale-102' : 'text-slate-500 hover:bg-slate-50'
             }`}
           >
-            <Trophy className="w-5 h-5" /> <Translate fil="Mode ng Masteriya" en="Mastery Mode" />
+            <Trophy className="w-4 h-4" /> <Translate fil="Masteriya" en="Mastery Mode" />
           </button>
           <button 
             onClick={() => setSelectedMode('survival')}
-            className={`px-6 md:px-8 py-3 rounded-xl font-extrabold transition-all flex items-center gap-2 ${
-              selectedMode === 'survival' ? 'bg-rose-500 text-white shadow-md scale-105' : 'text-slate-500 hover:bg-slate-50'
+            className={`flex-1 sm:flex-initial px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
+              selectedMode === 'survival' ? 'bg-rose-500 text-white shadow-md scale-102' : 'text-slate-500 hover:bg-slate-50'
             }`}
           >
-            <Zap className="w-5 h-5" /> <Translate fil="Mode ng Kaligtasan" en="Survival Mode" />
+            <Zap className="w-4 h-4" /> <Translate fil="Kaligtasan" en="Survival Mode" />
           </button>
         </div>
       </div>
 
       {/* 3 Levels Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
         {PREBUILT_QUIZZES.map((quiz, index) => {
           // Lock condition: Level 1 always unlocked. Level N unlocked if Level N-1 completed.
           const isUnlocked = index === 0 || completed[PREBUILT_QUIZZES[index - 1].id]
@@ -105,9 +105,9 @@ export default function PracticeHub() {
           return (
             <div 
               key={quiz.id} 
-              className={`rounded-3xl p-8 border-2 flex flex-col relative overflow-hidden transition-all duration-300 ${
+              className={`rounded-2xl sm:rounded-3xl p-5 sm:p-8 border-2 flex flex-col relative overflow-hidden transition-all duration-300 ${
                 isUnlocked 
-                  ? 'bg-white shadow-lg hover:-translate-y-1.5 hover:shadow-xl border-slate-200' 
+                  ? 'bg-white shadow-lg hover:-translate-y-1 hover:shadow-xl border-slate-200' 
                   : 'bg-slate-50/80 border-slate-200 grayscale opacity-75'
               }`}
             >

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import { Bell } from 'lucide-react'
@@ -108,10 +108,10 @@ export function SidebarNotification({ isCollapsed = false }: SidebarNotification
 
       {/* Flyout Dropdown Modal */}
       {isOpen && (
-        <div className={`fixed md:absolute z-[120] w-[320px] max-w-[90vw] bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden animate-slide-up ${
+        <div className={`fixed md:absolute z-[120] w-[320px] max-w-[calc(100vw-32px)] left-4 right-4 md:right-auto top-20 md:top-0 bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden animate-slide-up ${
           isCollapsed 
-            ? 'left-24 top-20' 
-            : 'left-4 md:left-64 top-20 md:top-0'
+            ? 'md:left-24' 
+            : 'md:left-64'
         }`}>
           <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
             <h3 className="font-heading font-black text-slate-900 text-sm flex items-center gap-2">

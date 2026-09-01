@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useMemo } from 'react'
 import { AlertCircle, Target, Flame, Sparkles, Compass, Trophy } from 'lucide-react'
@@ -108,18 +108,18 @@ export function StudentPerformanceClient({ initialAttempts }: { initialAttempts:
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl mx-auto animate-fade-in relative z-10">
-      <header className="mb-10">
+    <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto animate-fade-in relative z-10 space-y-6 sm:space-y-8 md:space-y-10">
+      <header>
         <div className="flex items-center gap-2 mb-2">
           <span className="px-3 py-1 bg-brand-light text-brand-primary font-extrabold text-xs rounded-full uppercase tracking-wider border border-brand-primary/20">
             🏆 <Translate fil="Iyong mga Medalya at Estatistika" en="Your Badges & Stats" />
           </span>
         </div>
-        <h1 className="text-3xl md:text-4xl font-heading font-black text-slate-900 mb-2 flex items-center gap-3">
-          <Sparkles className="w-8 h-8 text-amber-500 animate-pulse" /> 
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-heading font-black text-slate-900 mb-2 flex items-center gap-2 sm:gap-3">
+          <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500 animate-pulse shrink-0" /> 
           <Translate fil="Aking Pag-unlad" en="My Growth & Performance" />
         </h1>
-        <p className="text-slate-600 font-semibold">
+        <p className="text-slate-600 font-semibold text-xs sm:text-sm md:text-base">
           <Translate 
             fil="Subaybayan ang iyong progreso, grado sa bawat antas, at paglago sa paglipas ng panahon." 
             en="Track your progress, scores on each level, and growth over time." 
@@ -128,55 +128,55 @@ export function StudentPerformanceClient({ initialAttempts }: { initialAttempts:
       </header>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-lg hover:scale-[1.02] transition-transform">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-brand-light flex items-center justify-center">
-              <Target className="w-6 h-6 text-brand-primary" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200 shadow-md sm:shadow-lg hover:scale-[1.02] transition-transform">
+          <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-brand-light flex items-center justify-center shrink-0">
+              <Target className="w-5 h-5 sm:w-6 sm:h-6 text-brand-primary" />
             </div>
-            <h3 className="text-slate-600 font-bold text-base"><Translate fil="Grap ng Iskor (Average)" en="Avg Score" /></h3>
+            <h3 className="text-slate-600 font-bold text-xs sm:text-base truncate"><Translate fil="Grap ng Iskor (Average)" en="Avg Score" /></h3>
           </div>
-          <p className="text-5xl font-heading font-black text-slate-900">{avgScore}%</p>
+          <p className="text-3xl sm:text-5xl font-heading font-black text-slate-900">{avgScore}%</p>
         </div>
 
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-lg hover:scale-[1.02] transition-transform">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center">
-              <Flame className="w-6 h-6 text-orange-500" />
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200 shadow-md sm:shadow-lg hover:scale-[1.02] transition-transform">
+          <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-orange-100 flex items-center justify-center shrink-0">
+              <Flame className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" />
             </div>
-            <h3 className="text-slate-600 font-bold text-base"><Translate fil="Pinakamagandang Streak" en="Best Streak" /></h3>
+            <h3 className="text-slate-600 font-bold text-xs sm:text-base truncate"><Translate fil="Pinakamagandang Streak" en="Best Streak" /></h3>
           </div>
-          <p className="text-5xl font-heading font-black text-slate-900">{maxStreak} 🔥</p>
+          <p className="text-3xl sm:text-5xl font-heading font-black text-slate-900">{maxStreak} 🔥</p>
         </div>
 
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-lg hover:scale-[1.02] transition-transform">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-              <Compass className="w-6 h-6 text-slate-700" />
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200 shadow-md sm:shadow-lg hover:scale-[1.02] transition-transform">
+          <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-100 flex items-center justify-center shrink-0">
+              <Compass className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
             </div>
-            <h3 className="text-slate-600 font-bold text-base"><Translate fil="Kabuuang Pagsusulit" en="Total Quizzes / Levels" /></h3>
+            <h3 className="text-slate-600 font-bold text-xs sm:text-base truncate"><Translate fil="Kabuuang Pagsusulit" en="Total Quizzes / Levels" /></h3>
           </div>
-          <p className="text-5xl font-heading font-black text-slate-900">{totalAttempts}</p>
+          <p className="text-3xl sm:text-5xl font-heading font-black text-slate-900">{totalAttempts}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         
         {/* Score Growth Chart */}
-        <div className="lg:col-span-2 bg-white rounded-3xl p-8 border border-slate-200 shadow-xl flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-heading font-extrabold text-slate-900 flex items-center gap-2">
+        <div className="lg:col-span-2 bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200 shadow-lg sm:shadow-xl flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-heading font-extrabold text-slate-900 flex items-center gap-2">
               <span>📈</span> <Translate fil="Paglago ng Iskor sa Bawat Pagsusulit" en="Score Growth" />
             </h2>
             {totalAttempts > 0 && (
-              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+              <span className="text-[11px] sm:text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-slate-200">
                 {totalAttempts} {totalAttempts === 1 ? 'pagtatangka' : 'mga pagtatangka'}
               </span>
             )}
           </div>
           
           {totalAttempts > 1 ? (
-            <div className="relative w-full overflow-hidden bg-slate-50 rounded-2xl border border-slate-200 p-6 aspect-[21/9] flex items-center justify-center shadow-inner">
+            <div className="relative w-full overflow-hidden bg-slate-50 rounded-2xl border border-slate-200 p-3 sm:p-6 aspect-[21/9] flex items-center justify-center shadow-inner">
               <svg viewBox={`0 -20 ${chartWidth} ${chartHeight + 40}`} className="w-full h-full overflow-visible">
                 {/* Grid Lines */}
                 {[0, 25, 50, 75, 100].map(line => {
@@ -207,9 +207,9 @@ export function StudentPerformanceClient({ initialAttempts }: { initialAttempts:
               </svg>
             </div>
           ) : (
-            <div className="h-[250px] bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-600 font-semibold p-6 text-center shadow-inner">
-              <AlertCircle className="w-10 h-10 mb-3 text-brand-primary opacity-75" />
-              <p className="max-w-md">
+            <div className="h-[200px] sm:h-[250px] bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-600 font-semibold p-4 sm:p-6 text-center shadow-inner">
+              <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 mb-2 sm:mb-3 text-brand-primary opacity-75" />
+              <p className="max-w-md text-xs sm:text-sm">
                 <Translate 
                   fil="Kumuha ng kahit dalawang (2) pagsusulit o antas upang makita ang iyong grap ng paglago!" 
                   en="Take at least two (2) quizzes or levels to see your growth chart!" 
@@ -217,7 +217,7 @@ export function StudentPerformanceClient({ initialAttempts }: { initialAttempts:
               </p>
               <Link 
                 href="/student/practice" 
-                className="mt-4 px-6 py-2.5 bg-brand-primary hover:bg-slate-600 text-white rounded-full text-sm font-black transition-all shadow-sm"
+                className="mt-3 sm:mt-4 px-5 sm:px-6 py-2 sm:py-2.5 bg-brand-primary hover:bg-slate-600 text-white rounded-full text-xs sm:text-sm font-black transition-all shadow-sm"
               >
                 <Translate fil="Maglaro sa Pagsasanay" en="Play Practice Hub" /> ➔
               </Link>
@@ -226,8 +226,8 @@ export function StudentPerformanceClient({ initialAttempts }: { initialAttempts:
         </div>
 
         {/* History List */}
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl flex flex-col h-[460px]">
-          <h2 className="text-xl font-heading font-extrabold text-slate-900 mb-6 shrink-0 flex items-center gap-2">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200 shadow-lg sm:shadow-xl flex flex-col max-h-[460px]">
+          <h2 className="text-lg sm:text-xl font-heading font-extrabold text-slate-900 mb-4 sm:mb-6 shrink-0 flex items-center gap-2">
             <span>📜</span> <Translate fil="Mga Huling Pagtatangka" en="Recent Attempts" />
           </h2>
           

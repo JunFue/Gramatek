@@ -68,7 +68,7 @@ export function TriviaSlideshow() {
 
   return (
     <div 
-      className="bg-white rounded-3xl p-6 md:p-8 border-2 border-brand-primary/20 shadow-xl relative overflow-hidden transition-all group"
+      className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border-2 border-brand-primary/20 shadow-xl relative overflow-hidden transition-all group"
       onMouseEnter={() => setIsPlaying(false)}
       onMouseLeave={() => setIsPlaying(true)}
     >
@@ -85,13 +85,13 @@ export function TriviaSlideshow() {
       </div>
 
       {/* Header Bar */}
-      <div className="flex items-center justify-between mb-4 relative z-10">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-xs">
-            <Lightbulb className="w-4 h-4" />
+      <div className="flex items-center justify-between mb-3 sm:mb-4 relative z-10">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-xs shrink-0">
+            <Lightbulb className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
           <div>
-            <span className="text-[11px] font-black text-brand-primary uppercase tracking-widest block">
+            <span className="text-[10px] sm:text-[11px] font-black text-brand-primary uppercase tracking-widest block">
               <Translate fil="KAUNTING KAALAMAN • ALAM MO BA?" en="TRIVIA & FACTS • DID YOU KNOW?" />
             </span>
           </div>
@@ -111,11 +111,11 @@ export function TriviaSlideshow() {
       {/* Slide Content */}
       <div 
         key={currentIndex} 
-        className="min-h-[100px] md:min-h-[110px] flex flex-col justify-center py-2 animate-fade-in relative z-10 cursor-pointer"
+        className="min-h-[80px] sm:min-h-[100px] md:min-h-[110px] flex flex-col justify-center py-2 animate-fade-in relative z-10 cursor-pointer"
         onClick={goToNext}
         title="I-click para sa susunod na kaalaman"
       >
-        <p className="text-lg md:text-xl font-heading font-extrabold text-slate-900 leading-relaxed">
+        <p className="text-sm sm:text-lg md:text-xl font-heading font-extrabold text-slate-900 leading-relaxed">
           <strong className="text-brand-primary">{factTitle}</strong>
           {factBody && (
             <span className="text-slate-700 font-semibold"> – {factBody}</span>

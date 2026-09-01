@@ -94,21 +94,21 @@ export function StudentJoinFormClient({ classrooms }: StudentJoinFormClientProps
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Link
         href="/student"
-        className="inline-flex items-center gap-2 text-slate-500 hover:text-brand-primary font-bold transition-colors"
+        className="inline-flex items-center gap-2 text-slate-500 hover:text-brand-primary font-bold transition-colors text-xs sm:text-sm"
       >
         <ArrowLeft className="w-4 h-4" />
         <Translate fil="Bumalik sa Dashboard" en="Back to Dashboard" />
       </Link>
 
-      <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-xl space-y-6">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200 shadow-xl space-y-5 sm:space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-brand-light text-brand-primary flex items-center justify-center mx-auto shadow-sm">
-            <Play className="w-7 h-7 fill-brand-primary" />
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-brand-light text-brand-primary flex items-center justify-center mx-auto shadow-sm">
+            <Play className="w-6 h-6 sm:w-7 sm:h-7 fill-brand-primary" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-heading font-black text-slate-900">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-heading font-black text-slate-900">
             <Translate fil="Sumali sa Live Session" en="Join Live Session" />
           </h1>
           <p className="text-slate-500 text-sm font-medium">

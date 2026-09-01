@@ -21,12 +21,12 @@ export default async function EducatorLayout({
     .maybeSingle()
 
   return (
-    <div className="h-screen w-full bg-transparent flex flex-col md:flex-row overflow-hidden">
-      {/* Sidebar Navigation */}
+    <div className="h-[100dvh] w-full bg-transparent flex flex-col md:flex-row overflow-hidden">
+      {/* Sidebar & Mobile Navigation Shell */}
       <EducatorSidebar profile={profile} />
 
       {/* Main Content Area */}
-      <main className="flex-1 relative z-10 h-screen overflow-y-auto bg-transparent text-foreground">
+      <main className="flex-1 relative z-10 h-full overflow-y-auto bg-transparent text-foreground custom-scrollbar pt-16 pb-20 md:pt-0 md:pb-0">
         {children}
       </main>
     </div>
