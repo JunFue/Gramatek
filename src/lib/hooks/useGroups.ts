@@ -93,7 +93,11 @@ export function useGroups(sessionId: string) {
           refreshGroups()
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          refreshGroups()
+        }
+      })
 
     return () => {
       isMounted = false

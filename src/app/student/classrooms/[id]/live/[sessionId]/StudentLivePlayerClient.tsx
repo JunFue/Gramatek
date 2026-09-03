@@ -370,6 +370,7 @@ export function StudentLivePlayerClient({
   // Role permissions
   const isGroupMode = session?.mode === 'group'
   const isLeader = !isGroupMode || Boolean(myGroup && myGroup.leader_id === currentUserId)
+  const canSubmit = !isGroupMode || (myGroup ? (!myGroup.leader_id || myGroup.leader_id === currentUserId) : true)
   const isQuestionRevealed = !!(
     currentQuestion?.revealed_at ||
     session?.results_revealed_at ||
@@ -460,6 +461,7 @@ export function StudentLivePlayerClient({
       {isLive && currentQuestion && (
         <div className="space-y-6 animate-fade-in">
           <QuestionCard
+            key={currentQuestion.id}
             question={currentQuestion}
             pacing={session?.pacing || 'manual'}
             startedAt={session?.question_started_at}
@@ -467,7 +469,7 @@ export function StudentLivePlayerClient({
             randomizeChoices={session?.randomize_choices}
             seedKey={seedKey}
             isRevealed={isQuestionRevealed}
-            canSubmit={isLeader}
+            canSubmit={canSubmit}
             isGroupMode={isGroupMode}
             leaderName={myGroup?.leader?.full_name || undefined}
             myAnswer={myAnswer}

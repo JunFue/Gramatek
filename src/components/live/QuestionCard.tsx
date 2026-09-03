@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { LiveSessionQuestion } from '@/types/live-session'
 import { normalizeChoices, shuffleChoicesDeterministically } from '@/lib/utils/randomize'
 import { CountdownTimer } from './CountdownTimer'
@@ -49,6 +49,14 @@ export function QuestionCard({
   const [customTextInput, setCustomTextInput] = useState<string>(myAnswer || '')
   const [submitting, setSubmitting] = useState<boolean>(false)
   const [submitted, setSubmitted] = useState<boolean>(!!myAnswer)
+
+  // Sync state whenever question or myAnswer changes
+  useEffect(() => {
+    setSelectedChoice(myAnswer)
+    setCustomTextInput(myAnswer || '')
+    setSubmitted(!!myAnswer)
+    setSubmitting(false)
+  }, [question.id, myAnswer])
 
   // Normalize and optionally shuffle choices deterministically
   const displayChoices = useMemo(() => {

@@ -60,7 +60,7 @@ export default async function StudentClassroomPage({ params }: { params: Promise
     .from('live_sessions')
     .select('id, status, mode')
     .eq('classroom_id', id)
-    .neq('status', 'ended')
+    .in('status', ['lobby', 'question', 'reveal'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()

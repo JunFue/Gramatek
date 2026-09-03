@@ -14,7 +14,7 @@ export default async function StudentClassroomLiveJoinDirectPage({
     .from('live_sessions')
     .select('id')
     .eq('classroom_id', classroomId)
-    .neq('status', 'ended')
+    .in('status', ['lobby', 'question', 'reveal'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()

@@ -28,7 +28,14 @@ export async function createLiveSessionAction(formData: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  // 1. Create Session
+  // 1. End any stale unended sessions for this classroom so students aren't stuck in zombie sessions
+  await supabase
+    .from('live_sessions')
+    .update({ status: 'ended' })
+    .eq('classroom_id', formData.classroom_id)
+    .neq('status', 'ended')
+
+  // 2. Create Session
   const { data: sessionId, error: sessionErr } = await supabase.rpc('create_live_session', {
     p_classroom_id: formData.classroom_id,
     p_mode: formData.mode,
@@ -45,7 +52,7 @@ export async function createLiveSessionAction(formData: {
     throw new Error(sessionErr?.message || 'Failed to create live session')
   }
 
-  // 2. Add Questions directly to live_session_questions
+  // 3. Add Questions directly to live_session_questions
   if (formData.questions && formData.questions.length > 0) {
     let questionsList = [...formData.questions]
     if (formData.randomize_question_order) {
@@ -98,7 +105,14 @@ export async function createLiveSessionAction(formData: {
     }
   }
 
+  // 4. Set newly created session to 'lobby' so the lobby is officially open for students
+  await supabase
+    .from('live_sessions')
+    .update({ status: 'lobby' })
+    .eq('id', sessionId)
+
   revalidatePath(`/educator/classrooms/${formData.classroom_id}`)
+  revalidatePath(`/student/classrooms/${formData.classroom_id}`)
   return { success: true, sessionId }
 }
 
