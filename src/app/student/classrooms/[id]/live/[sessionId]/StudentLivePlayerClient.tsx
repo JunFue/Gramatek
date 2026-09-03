@@ -257,6 +257,11 @@ export function StudentLivePlayerClient({
     }
   }
 
+  const currentStatus = session?.status || initialSession.status
+  const isLobby = currentStatus === 'lobby'
+  const isLive = currentStatus === 'question' || currentStatus === 'reveal'
+  const isEnded = currentStatus === 'ended'
+
   // Render Kicked / Removed Screen
   if (isRemoved) {
     return (
@@ -289,19 +294,24 @@ export function StudentLivePlayerClient({
   // Render Join Error (e.g. Session Already Started, Capacity Full, Not Enrolled)
   if (joinError) {
     const errorLower = joinError.toLowerCase()
-    const isStarted = errorLower.includes('already started')
+    const isPreparing = errorLower.includes('naghahanda') || errorLower.includes('setup') || errorLower.includes('preparing') || errorLower.includes('hindi pa bukas') || currentStatus === 'setup'
+    const isStarted = !isPreparing && (errorLower.includes('already started') || errorLower.includes('in progress'))
     const isCapacityFull = errorLower.includes('capacity')
     const isNotEnrolled = errorLower.includes('enrolled') || errorLower.includes('classroom')
     const isRemovedUser = errorLower.includes('removed')
 
     return (
       <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center max-w-md mx-auto my-12 space-y-6 animate-fade-in">
-        <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-md">
-          <AlertCircle className="w-8 h-8" />
+        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center mx-auto shadow-md ${
+          isPreparing ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'
+        }`}>
+          {isPreparing ? <Clock className="w-8 h-8 animate-pulse" /> : <AlertCircle className="w-8 h-8" />}
         </div>
         <div className="space-y-2">
           <h2 className="text-2xl font-heading font-black text-slate-900 leading-tight">
-            {isStarted ? (
+            {isPreparing ? (
+              <Translate fil="Naghahanda Pa ang Guro" en="Educator is Setting Up" />
+            ) : isStarted ? (
               <Translate fil="Nagsimula na ang Sesyon" en="Session Already In Progress" />
             ) : isCapacityFull ? (
               <Translate fil="Puno na ang Sesyon" en="Session is Full" />
@@ -314,7 +324,12 @@ export function StudentLivePlayerClient({
             )}
           </h2>
           <p className="text-slate-600 text-sm font-medium leading-relaxed">
-            {isStarted ? (
+            {isPreparing ? (
+              <Translate
+                fil="Kasalukuyan pang inihahanda at inaayos ng guro ang mga tanong at gameplay para sa Live Session na ito. Hindi pa bukas ang lobby para sa pagsali. Mangyaring maghintay sa silid-aralan hanggang sa buksan ang opisyal na Lobby."
+                en="The educator is currently configuring the questions and gameplay for this live session. The lobby is not yet open. Please wait in your classroom until the official lobby opens."
+              />
+            ) : isStarted ? (
               <Translate
                 fil="Kasalukuyan nang naglalaro ang klase sa Live Session na ito at sarado na ang pagsali para sa mga bagong manlalaro. Maghintay sa susunod na laro ng guro."
                 en="This live session is already in progress and is no longer accepting new participants. Please wait for the educator's next session."
@@ -361,11 +376,6 @@ export function StudentLivePlayerClient({
       </div>
     )
   }
-
-  const currentStatus = session?.status || initialSession.status
-  const isLobby = currentStatus === 'setup' || currentStatus === 'lobby'
-  const isLive = currentStatus === 'question' || currentStatus === 'reveal'
-  const isEnded = currentStatus === 'ended'
 
   // Role permissions
   const isGroupMode = session?.mode === 'group'
