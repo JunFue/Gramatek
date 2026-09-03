@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { LiveSessionQuestion } from '@/types/live-session'
 import { normalizeChoices, shuffleChoicesDeterministically } from '@/lib/utils/randomize'
 import { CountdownTimer } from './CountdownTimer'
-import { CheckCircle2, XCircle, Clock, Send, ShieldAlert, Sparkles } from 'lucide-react'
+import { CheckCircle2, XCircle, Clock, Send, ShieldAlert, Sparkles, Loader2, Check } from 'lucide-react'
 import { Translate } from '@/components/Translate'
 
 interface QuestionCardProps {
@@ -59,14 +59,13 @@ export function QuestionCard({
     return raw
   }, [question.choices, randomizeChoices, seedKey, question.id])
 
-  const handleSubmit = async (choiceText: string) => {
-    if (!canSubmit || readOnly || submitted || submitting || !onSubmit) return
-    setSelectedChoice(choiceText)
+  const handleSubmit = async (answerText: string) => {
+    if (!canSubmit || readOnly || submitted || submitting || !onSubmit || !answerText.trim()) return
     setSubmitting(true)
-    setSubmitted(true)
 
     try {
-      await onSubmit(choiceText)
+      await onSubmit(answerText.trim())
+      setSubmitted(true)
     } catch (err) {
       console.error('Error submitting answer:', err)
       setSubmitted(false)
@@ -129,63 +128,110 @@ export function QuestionCard({
 
       {/* Choices Grid or Text Input */}
       {displayChoices.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-          {displayChoices.map((choice, idx) => {
-            const choiceLetter = String.fromCharCode(65 + idx)
-            const isSelected = selectedChoice === choice.text || myAnswer === choice.text
-            const isCorrect = isRevealed && (choice.text.trim().toLowerCase() === question.correct_answer.trim().toLowerCase())
-            const isWrongSelected = isRevealed && isSelected && !isCorrect
+        <div className="space-y-6 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {displayChoices.map((choice, idx) => {
+              const choiceLetter = String.fromCharCode(65 + idx)
+              const isSelected = selectedChoice === choice.text || myAnswer === choice.text
+              const isCorrect = isRevealed && (choice.text.trim().toLowerCase() === question.correct_answer.trim().toLowerCase())
+              const isWrongSelected = isRevealed && isSelected && !isCorrect
 
-            let choiceStyle = 'bg-slate-50 border-slate-200 text-slate-800 hover:border-brand-primary hover:bg-brand-primary/5 cursor-pointer'
+              let choiceStyle = 'bg-slate-50 border-slate-200 text-slate-800 hover:border-brand-primary hover:bg-brand-primary/5 cursor-pointer'
 
-            if (isRevealed) {
-              if (isCorrect) {
-                choiceStyle = 'bg-emerald-50 border-2 border-emerald-500 text-emerald-950 font-black shadow-md'
-              } else if (isWrongSelected) {
-                choiceStyle = 'bg-rose-50 border-2 border-rose-500 text-rose-950 font-bold'
-              } else {
-                choiceStyle = 'bg-slate-50/60 border-slate-200 text-slate-400 opacity-60'
+              if (isRevealed) {
+                if (isCorrect) {
+                  choiceStyle = 'bg-emerald-50 border-2 border-emerald-500 text-emerald-950 font-black shadow-md'
+                } else if (isWrongSelected) {
+                  choiceStyle = 'bg-rose-50 border-2 border-rose-500 text-rose-950 font-bold'
+                } else {
+                  choiceStyle = 'bg-slate-50/60 border-slate-200 text-slate-400 opacity-60'
+                }
+              } else if (submitted && isSelected) {
+                choiceStyle = 'bg-brand-primary/10 border-2 border-brand-primary text-brand-primary font-black shadow-md'
+              } else if (submitted) {
+                choiceStyle = 'bg-slate-50/60 border-slate-200 text-slate-400 opacity-60 cursor-default'
+              } else if (isSelected) {
+                choiceStyle = 'bg-brand-primary/10 border-2 border-brand-primary text-brand-primary font-black shadow-md scale-[1.01]'
               }
-            } else if (submitted && isSelected) {
-              choiceStyle = 'bg-brand-primary/10 border-2 border-brand-primary text-brand-primary font-black shadow-md'
-            } else if (submitted) {
-              choiceStyle = 'bg-slate-50/60 border-slate-200 text-slate-400 opacity-60'
-            }
 
-            return (
-              <button
-                key={choice.id}
-                disabled={readOnly || !canSubmit || submitted || isRevealed}
-                onClick={() => handleSubmit(choice.text)}
-                className={`w-full p-4 md:p-5 rounded-2xl border text-left transition-all flex items-start gap-3.5 shadow-sm active:scale-[0.99] disabled:cursor-default ${choiceStyle}`}
-              >
-                <span
-                  className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border ${
-                    isRevealed && isCorrect
-                      ? 'bg-emerald-500 text-white border-emerald-600'
-                      : isRevealed && isWrongSelected
-                      ? 'bg-rose-500 text-white border-rose-600'
-                      : isSelected
-                      ? 'bg-brand-primary text-white border-brand-primary'
-                      : 'bg-white text-slate-700 border-slate-200 shadow-inner'
-                  }`}
+              return (
+                <button
+                  key={choice.id}
+                  disabled={readOnly || !canSubmit || submitted || isRevealed}
+                  onClick={() => {
+                    if (!submitted && !readOnly && canSubmit && !isRevealed) {
+                      setSelectedChoice(choice.text)
+                    }
+                  }}
+                  className={`w-full p-4 md:p-5 rounded-2xl border text-left transition-all flex items-start gap-3.5 shadow-sm active:scale-[0.99] disabled:cursor-default ${choiceStyle}`}
                 >
-                  {choiceLetter}
-                </span>
+                  <span
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border ${
+                      isRevealed && isCorrect
+                        ? 'bg-emerald-500 text-white border-emerald-600'
+                        : isRevealed && isWrongSelected
+                        ? 'bg-rose-500 text-white border-rose-600'
+                        : isSelected
+                        ? 'bg-brand-primary text-white border-brand-primary'
+                        : 'bg-white text-slate-700 border-slate-200 shadow-inner'
+                    }`}
+                  >
+                    {choiceLetter}
+                  </span>
 
-                <span className="text-base md:text-lg font-bold flex-1 pt-0.5 leading-relaxed">
-                  {choice.text}
-                </span>
+                  <span className="text-base md:text-lg font-bold flex-1 pt-0.5 leading-relaxed">
+                    {choice.text}
+                  </span>
 
-                {isRevealed && isCorrect && (
-                  <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 self-center" />
+                  {isRevealed && isCorrect && (
+                    <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 self-center" />
+                  )}
+                  {isRevealed && isWrongSelected && (
+                    <XCircle className="w-6 h-6 text-rose-600 shrink-0 self-center" />
+                  )}
+                  {!isRevealed && isSelected && !submitted && (
+                    <Check className="w-5 h-5 text-brand-primary shrink-0 self-center animate-scale-up" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Explicit Submit Button for Choices */}
+          {!submitted && canSubmit && !readOnly && !isRevealed && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 md:p-5 bg-slate-50 border border-slate-200 rounded-2xl animate-fade-in shadow-xs">
+              <div className="text-xs text-slate-600">
+                {selectedChoice ? (
+                  <span>
+                    Napiling Sagot: <strong className="text-slate-900 font-black text-sm">{selectedChoice}</strong>
+                  </span>
+                ) : (
+                  <span className="text-slate-400 font-medium italic">
+                    <Translate fil="Pumili ng isa sa mga opsyon sa itaas bago magpasa." en="Select an option above before submitting." />
+                  </span>
                 )}
-                {isRevealed && isWrongSelected && (
-                  <XCircle className="w-6 h-6 text-rose-600 shrink-0 self-center" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => selectedChoice && handleSubmit(selectedChoice)}
+                disabled={!selectedChoice || submitting}
+                className="w-full sm:w-auto px-8 py-3.5 bg-brand-primary hover:bg-slate-800 text-white font-black text-sm rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span><Translate fil="Ipinapasa..." en="Submitting..." /></span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 text-emerald-400" />
+                    <span><Translate fil="Ipasa ang Sagot ➔" en="Submit Answer ➔" /></span>
+                  </>
                 )}
               </button>
-            )
-          })}
+            </div>
+          )}
         </div>
       ) : (
         <div className="max-w-lg mx-auto space-y-4 relative z-10">
@@ -207,9 +253,19 @@ export function QuestionCard({
               type="button"
               onClick={() => handleSubmit(customTextInput.trim())}
               disabled={!customTextInput.trim() || submitting}
-              className="w-full py-3.5 bg-brand-primary hover:bg-slate-800 text-white font-black rounded-2xl shadow-md cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+              className="w-full py-3.5 bg-brand-primary hover:bg-slate-800 text-white font-black rounded-2xl shadow-md cursor-pointer transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              Ipasa ang Sagot ➔
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span><Translate fil="Ipinapasa..." en="Submitting..." /></span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 text-emerald-400" />
+                  <span><Translate fil="Ipasa ang Sagot ➔" en="Submit Answer ➔" /></span>
+                </>
+              )}
             </button>
           )}
         </div>

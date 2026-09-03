@@ -7,7 +7,7 @@ import {
   Users, User, Play, SkipForward, ArrowRight, Eye, 
   Trophy, LogOut, ExternalLink, QrCode, Crown, UserMinus, 
   CheckCircle2, Sparkles, RefreshCw, AlertTriangle, Loader2,
-  ChevronRight, ArrowLeft
+  ChevronRight, ArrowLeft, Clock, Check
 } from 'lucide-react'
 import { Translate } from '@/components/Translate'
 import { LiveSession } from '@/types/live-session'
@@ -66,26 +66,38 @@ export function HostControlPanelClient({
   const [numGroupsToCreate, setNumGroupsToCreate] = useState<number>(2)
   const [isQRModalOpen, setIsQRModalOpen] = useState<boolean>(false)
   const [submissionCount, setSubmissionCount] = useState<number>(0)
+  const [submissions, setSubmissions] = useState<Array<{
+    student_id: string | null
+    group_id: string | null
+    submitted_at: string
+    response_ms: number
+    is_correct?: boolean
+  }>>([])
+  const [submissionFilter, setSubmissionFilter] = useState<'all' | 'submitted' | 'pending'>('all')
   const [errorToast, setErrorToast] = useState<string | null>(null)
   const [successToast, setSuccessToast] = useState<string | null>(null)
 
   const supabase = createClient()
 
-  // Track submissions count for current question
+  // Track submissions count and records for current question
   useEffect(() => {
     if (!currentQuestion || !session) {
       setSubmissionCount(0)
+      setSubmissions([])
       return
     }
 
     const fetchSubmissions = async () => {
-      const { count } = await supabase
+      const { data } = await supabase
         .from('live_session_answers')
-        .select('*', { count: 'exact', head: true })
+        .select('student_id, group_id, submitted_at, response_ms, is_correct')
         .eq('session_id', session.id)
         .eq('question_id', currentQuestion.id)
 
-      setSubmissionCount(count || 0)
+      if (data) {
+        setSubmissions(data)
+        setSubmissionCount(data.length)
+      }
     }
 
     fetchSubmissions()
@@ -95,7 +107,7 @@ export function HostControlPanelClient({
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'live_session_answers',
           filter: `question_id=eq.${currentQuestion.id}`
@@ -612,6 +624,178 @@ export function HostControlPanelClient({
                 <Translate fil="Walang aktibong tanong." en="No active question." />
               </div>
             )}
+
+            {/* Real-time Student Submission Status Monitor */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-md space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-heading font-black text-slate-900 text-base">
+                      <Translate fil="Status ng Pagsusumite ng mga Mag-aaral" en="Student Submission Status" />
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Real-time na subaybayan kung sino na ang nakapagpasa para sa tanong na ito.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-3.5 py-1.5 bg-emerald-100 text-emerald-950 rounded-full text-xs font-black border border-emerald-300">
+                    {submissionCount} / {totalTargetSubmissions} ({Math.round((submissionCount / Math.max(1, totalTargetSubmissions)) * 100)}%)
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-linear-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, Math.round((submissionCount / Math.max(1, totalTargetSubmissions)) * 100))}%` }}
+                />
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setSubmissionFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                    submissionFilter === 'all'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Lahat ({totalTargetSubmissions})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSubmissionFilter('submitted')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                    submissionFilter === 'submitted'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                  }`}
+                >
+                  ✓ Nakasumite ({submissionCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSubmissionFilter('pending')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                    submissionFilter === 'pending'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
+                  }`}
+                >
+                  ⏳ Sumasagot Pa ({Math.max(0, totalTargetSubmissions - submissionCount)})
+                </button>
+              </div>
+
+              {/* Submission Roster List (Individual vs Group Mode) */}
+              {session?.mode === 'group' ? (
+                /* Group Mode submission list */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1">
+                  {groups
+                    .filter((g) => {
+                      const hasSubmitted = submissions.some((s) => s.group_id === g.id)
+                      if (submissionFilter === 'submitted') return hasSubmitted
+                      if (submissionFilter === 'pending') return !hasSubmitted
+                      return true
+                    })
+                    .map((group) => {
+                      const subRecord = submissions.find((s) => s.group_id === group.id)
+                      const isSubmitted = !!subRecord
+
+                      return (
+                        <div
+                          key={group.id}
+                          className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                            isSubmitted
+                              ? 'bg-emerald-50/70 border-emerald-300 shadow-2xs'
+                              : 'bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-xs font-black text-slate-900 truncate">{group.label}</p>
+                            <p className="text-[10px] text-slate-500 font-medium truncate">
+                              Lider: {group.leader?.full_name || 'Wala'}
+                            </p>
+                          </div>
+
+                          <div>
+                            {isSubmitted ? (
+                              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-900 rounded-lg text-[10px] font-black flex items-center gap-1 border border-emerald-300">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                Naisumite na
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 bg-amber-100/70 text-amber-800 rounded-lg text-[10px] font-bold flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                Sumasagot pa...
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              ) : (
+                /* Individual Mode submission list */
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto pr-1">
+                  {activeParticipants
+                    .filter((p) => {
+                      const hasSubmitted = submissions.some((s) => s.student_id === p.student_id)
+                      if (submissionFilter === 'submitted') return hasSubmitted
+                      if (submissionFilter === 'pending') return !hasSubmitted
+                      return true
+                    })
+                    .map((p) => {
+                      const name = p.profiles?.full_name || 'Mag-aaral'
+                      const subRecord = submissions.find((s) => s.student_id === p.student_id)
+                      const isSubmitted = !!subRecord
+
+                      return (
+                        <div
+                          key={p.student_id}
+                          className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-2.5 ${
+                            isSubmitted
+                              ? 'bg-emerald-50/70 border-emerald-300 shadow-2xs'
+                              : 'bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-7 h-7 rounded-lg bg-brand-light text-brand-primary flex items-center justify-center font-bold text-[11px] shrink-0">
+                              {p.profiles?.avatar_url ? (
+                                <img src={p.profiles.avatar_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                              ) : (
+                                name.charAt(0).toUpperCase()
+                              )}
+                            </div>
+                            <span className="text-xs font-bold text-slate-800 truncate">{name}</span>
+                          </div>
+
+                          <div>
+                            {isSubmitted ? (
+                              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded-md text-[10px] font-black flex items-center gap-1 border border-emerald-300 shrink-0">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                {subRecord?.response_ms ? `${(subRecord.response_ms / 1000).toFixed(1)}s` : '✓'}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-amber-100/70 text-amber-800 rounded-md text-[10px] font-bold flex items-center gap-1 shrink-0">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                ⏳
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              )}
+            </div>
 
             {/* Jump-to-question Quick Navigator */}
             <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-md">
