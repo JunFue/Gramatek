@@ -20,6 +20,7 @@ export async function createLiveSessionAction(formData: {
   randomize_choices: boolean
   randomize_question_order: boolean
   reveal_mode: 'auto_per_question' | 'manual_per_question' | 'end_of_session'
+  quiz_id?: string | null
   question_ids?: string[]
   per_question_time_limits?: number[]
   questions?: LiveQuestionInput[]
@@ -44,7 +45,8 @@ export async function createLiveSessionAction(formData: {
     p_default_time_limit_seconds: formData.default_time_limit_seconds,
     p_randomize_choices: formData.randomize_choices,
     p_randomize_question_order: formData.randomize_question_order,
-    p_reveal_mode: formData.reveal_mode
+    p_reveal_mode: formData.reveal_mode,
+    p_quiz_id: formData.quiz_id || null
   })
 
   if (sessionErr || !sessionId) {
@@ -193,3 +195,15 @@ export async function duplicateSessionAction(sourceSessionId: string) {
   if (error) throw new Error(error.message)
   return { success: true, newSessionId }
 }
+
+export async function recordLiveSessionScoresAction(sessionId: string, record: boolean) {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('record_live_session_scores', {
+    p_session_id: sessionId,
+    p_record: record
+  })
+  if (error) throw new Error(error.message)
+  revalidatePath('/educator/classrooms')
+  return data
+}
+

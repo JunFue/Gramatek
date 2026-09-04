@@ -19,6 +19,8 @@ export interface LiveSession {
   randomize_choices: boolean
   randomize_question_order: boolean
   reveal_mode: LiveSessionRevealMode
+  quiz_id?: string | null
+  scores_recorded_to_progress?: boolean | null
   current_question_id: string | null
   question_started_at: string | null
   question_index: number

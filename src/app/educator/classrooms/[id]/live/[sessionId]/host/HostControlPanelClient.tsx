@@ -7,7 +7,7 @@ import {
   Users, User, Play, SkipForward, ArrowRight, Eye, 
   Trophy, LogOut, ExternalLink, QrCode, Crown, UserMinus, 
   CheckCircle2, Sparkles, RefreshCw, AlertTriangle, Loader2,
-  ChevronRight, ArrowLeft, Clock, Check
+  ChevronRight, ArrowLeft, Clock, Check, Award, BookCheck
 } from 'lucide-react'
 import { Translate } from '@/components/Translate'
 import { LiveSession } from '@/types/live-session'
@@ -26,7 +26,8 @@ import {
   forceAssignLeaderAction,
   revealAnswerAction,
   revealFinalResultsAction,
-  endSessionAction
+  endSessionAction,
+  recordLiveSessionScoresAction
 } from '@/app/educator/live/actions'
 import { createClient } from '@/lib/supabase/client'
 
@@ -76,6 +77,13 @@ export function HostControlPanelClient({
   const [submissionFilter, setSubmissionFilter] = useState<'all' | 'submitted' | 'pending'>('all')
   const [errorToast, setErrorToast] = useState<string | null>(null)
   const [successToast, setSuccessToast] = useState<string | null>(null)
+  const [recordingScores, setRecordingScores] = useState<boolean | null>(initialSession.scores_recorded_to_progress ?? null)
+
+  useEffect(() => {
+    if (session?.scores_recorded_to_progress !== undefined) {
+      setRecordingScores(session.scores_recorded_to_progress)
+    }
+  }, [session?.scores_recorded_to_progress])
 
   const supabase = createClient()
 
@@ -231,7 +239,24 @@ export function HostControlPanelClient({
           router.push(`/educator/classrooms/${classroomId}/live/${initialSession.id}/results`)
         }
       } catch (err: any) {
-        showToast('error', err?.message || 'Nabigo sa pagtapos ng sesyon.')
+        showToast('error', err?.message || 'Nabigo sa pagtapos.')
+      }
+    })
+  }
+
+  const handleRecordScores = (record: boolean) => {
+    startTransition(async () => {
+      try {
+        await recordLiveSessionScoresAction(initialSession.id, record)
+        setRecordingScores(record)
+        showToast(
+          'success',
+          record
+            ? 'Naitala na ang mga marka sa progreso ng mga mag-aaral! 🎉'
+            : 'Naitakda bilang hindi naka-record sa grado (Palaro Lamang).'
+        )
+      } catch (err: any) {
+        showToast('error', err?.message || 'Nabigo sa pag-update ng marka.')
       }
     })
   }
@@ -862,6 +887,105 @@ export function HostControlPanelClient({
                 />
               )}
             </p>
+          </div>
+
+          {/* Score Recording to Student Progress Option Card */}
+          <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 text-left space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-brand-light text-brand-primary flex items-center justify-center font-bold shrink-0">
+                <BookCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-heading font-black text-slate-900">
+                  <Translate fil="Pagre-record ng Marka sa Progreso ng Mag-aaral" en="Record Scores to Student Progress" />
+                </h3>
+                <p className="text-xs font-semibold text-slate-600 mt-0.5">
+                  <Translate
+                    fil="Pumili kung nais mong i-save ang mga nakuhang marka sa opisyal na grado at progreso ng klase, o panatilihin ito bilang palaro lamang."
+                    en="Choose whether to save the scores to students' official grades and progress, or keep it as casual play."
+                  />
+                </p>
+              </div>
+            </div>
+
+            {/* Current Recording Status */}
+            {recordingScores === true && (
+              <div className="p-3.5 rounded-2xl bg-emerald-100/70 border border-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <span className="text-xs font-black text-emerald-950">
+                    <Translate fil="Naitala na sa Opisyal na Grado ng mga Mag-aaral" en="Recorded to Students' Official Grades" />
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => handleRecordScores(false)}
+                  className="px-3.5 py-1.5 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer self-start sm:self-auto"
+                >
+                  <Translate fil="Alisin sa Grado (Gawing Palaro Lamang)" en="Remove from Grades (Casual Only)" />
+                </button>
+              </div>
+            )}
+
+            {recordingScores === false && (
+              <div className="p-3.5 rounded-2xl bg-slate-200/80 border border-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <Award className="w-4 h-4 text-slate-700 shrink-0" />
+                  <span className="text-xs font-black text-slate-800">
+                    <Translate fil="Naitakda bilang Palaro Lamang (Hindi Naka-record sa Grado)" en="Casual Play (Not Recorded to Grades)" />
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => handleRecordScores(true)}
+                  className="px-3.5 py-1.5 bg-brand-primary hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all cursor-pointer self-start sm:self-auto"
+                >
+                  <Translate fil="Itala sa Grado ng Mag-aaral" en="Record to Student Grades" />
+                </button>
+              </div>
+            )}
+
+            {recordingScores === null && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => handleRecordScores(true)}
+                  className="p-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-left font-black transition-all shadow-md hover:shadow-lg active:scale-98 flex items-center justify-between cursor-pointer"
+                >
+                  <div>
+                    <p className="text-sm font-black flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <Translate fil="Itala sa Progreso" en="Save to Progress" />
+                    </p>
+                    <p className="text-[11px] text-emerald-100 font-semibold mt-0.5">
+                      <Translate fil="Isama sa opisyal na grado at analytics" en="Include in grades & analytics" />
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-emerald-200" />
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => handleRecordScores(false)}
+                  className="p-4 rounded-2xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-left font-black transition-all shadow-xs hover:shadow-md active:scale-98 flex items-center justify-between cursor-pointer"
+                >
+                  <div>
+                    <p className="text-sm font-black flex items-center gap-1.5">
+                      <span>✕</span>
+                      <Translate fil="Huwag Itala (Palaro Lamang)" en="Don't Save (Casual Only)" />
+                    </p>
+                    <p className="text-[11px] text-slate-600 font-semibold mt-0.5">
+                      <Translate fil="Mananatili sa leaderboard pero walang grade" en="Keep in leaderboard without grading" />
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">

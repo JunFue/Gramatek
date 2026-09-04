@@ -211,6 +211,7 @@ export function SetupWizardClient({
           randomize_choices: randomizeChoices,
           randomize_question_order: randomizeQuestions,
           reveal_mode: revealMode,
+          quiz_id: selectedDraftId || null,
           questions: questionsPayload
         })
 

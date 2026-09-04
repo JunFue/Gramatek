@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { 
   Trophy, Download, Copy, ArrowLeft, CheckCircle2, 
-  XCircle, Clock, Users, User, Sparkles, Loader2 
+  XCircle, Clock, Users, User, Sparkles, Loader2,
+  Award, BookCheck, ChevronRight
 } from 'lucide-react'
 import { Translate } from '@/components/Translate'
 import { LiveSession, LiveSessionQuestion, LiveSessionParticipant, LiveSessionGroup, LiveSessionAnswer } from '@/types/live-session'
-import { duplicateSessionAction } from '@/app/educator/live/actions'
+import { duplicateSessionAction, recordLiveSessionScoresAction } from '@/app/educator/live/actions'
 
 interface EducatorLiveResultsClientProps {
   classroomId: string
@@ -33,10 +34,27 @@ export function EducatorLiveResultsClient({
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [toast, setToast] = useState<string | null>(null)
+  const [recordingScores, setRecordingScores] = useState<boolean | null>(session.scores_recorded_to_progress ?? null)
 
   const showToast = (msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(null), 3000)
+  }
+
+  const handleToggleRecordScores = (record: boolean) => {
+    startTransition(async () => {
+      try {
+        await recordLiveSessionScoresAction(session.id, record)
+        setRecordingScores(record)
+        showToast(
+          record 
+            ? 'Naitala na ang mga marka sa opisyal na grado at progreso ng mga mag-aaral! 🎉' 
+            : 'Naitakda bilang palaro lamang (Inalis sa grado).'
+        )
+      } catch (err: any) {
+        showToast(err?.message || 'Nabigo sa pag-update ng grado.')
+      }
+    })
   }
 
   // Calculate question metrics
@@ -198,6 +216,104 @@ export function EducatorLiveResultsClient({
             {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
             <Translate fil="I-duplicate ang Sesyon" en="Duplicate Session" />
           </button>
+        </div>
+      </div>
+
+      {/* Score Recording to Student Progress Status & Control Card */}
+      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-start sm:items-center gap-4">
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold shrink-0 shadow-xs ${
+            recordingScores === true 
+              ? 'bg-emerald-100 text-emerald-700' 
+              : recordingScores === false 
+              ? 'bg-slate-100 text-slate-700' 
+              : 'bg-amber-100 text-amber-700'
+          }`}>
+            <BookCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                <Translate fil="Status ng Grado" en="Gradebook Status" />
+              </span>
+              {recordingScores === true ? (
+                <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[11px] font-black flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  <Translate fil="Naitala sa Progreso" en="Saved to Progress" />
+                </span>
+              ) : recordingScores === false ? (
+                <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-full text-[11px] font-black">
+                  <Translate fil="Palaro Lamang (Hindi Naka-record)" en="Casual Play (Not Recorded)" />
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[11px] font-black">
+                  <Translate fil="Naghihintay ng Desisyon" en="Pending Decision" />
+                </span>
+              )}
+            </div>
+            <p className="text-sm font-bold text-slate-800">
+              {recordingScores === true ? (
+                <Translate
+                  fil="Ang mga nakuhang marka sa sesyong ito ay opisyal na naitala sa student progress at gradebook."
+                  en="The scores from this session are officially saved in the students' progress and gradebook."
+                />
+              ) : recordingScores === false ? (
+                <Translate
+                  fil="Ang sesyong ito ay naitakda bilang palaro lamang at hindi binibilang sa opisyal na grado."
+                  en="This session is set as casual play and is not counted toward official student grades."
+                />
+              ) : (
+                <Translate
+                  fil="Nais mo bang itala ang mga marka ng mag-aaral mula sa sesyong ito sa kanilang opisyal na progreso?"
+                  en="Would you like to record students' scores from this session into their official classroom progress?"
+                />
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          {recordingScores === true ? (
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => handleToggleRecordScores(false)}
+              className="px-5 py-2.5 bg-slate-100 hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-xs font-bold transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+              <Translate fil="Alisin sa Grado (Gawing Palaro Lamang)" en="Remove from Grades (Casual Only)" />
+            </button>
+          ) : recordingScores === false ? (
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => handleToggleRecordScores(true)}
+              className="px-5 py-2.5 bg-brand-primary hover:bg-brand-secondary text-white rounded-full text-xs font-bold shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Award className="w-3.5 h-3.5" />}
+              <Translate fil="Itala sa Grado ng Mag-aaral" en="Record to Student Grades" />
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => handleToggleRecordScores(true)}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-bold shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                <Translate fil="✓ Oo, Itala sa Progreso" en="✓ Save to Progress" />
+              </button>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => handleToggleRecordScores(false)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Translate fil="✕ Huwag Itala (Palaro)" en="✕ Don't Save (Casual)" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
