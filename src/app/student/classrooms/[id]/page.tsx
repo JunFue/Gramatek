@@ -65,6 +65,18 @@ export default async function StudentClassroomPage({ params }: { params: Promise
     .limit(1)
     .maybeSingle()
 
+  let isParticipant = false
+  if (activeLiveSession) {
+    const { data: pCheck } = await supabase
+      .from('live_session_participants')
+      .select('student_id')
+      .eq('session_id', activeLiveSession.id)
+      .eq('student_id', user.id)
+      .is('removed_at', null)
+      .maybeSingle()
+    isParticipant = !!pCheck
+  }
+
   const tier = summary.overallGradeTier
 
   return (
@@ -72,22 +84,54 @@ export default async function StudentClassroomPage({ params }: { params: Promise
   
       {/* Active Live Session Banner */}
       {activeLiveSession && (
-        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-linear-to-r from-amber-500 to-yellow-500 text-slate-950 font-black shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-bounce">
-          <div className="flex items-center gap-3">
-            <span className="w-3 h-3 rounded-full bg-red-600 animate-ping" />
-            <div>
-              <p className="text-[10px] sm:text-xs uppercase tracking-wider text-amber-950">LIVE NGAYON</p>
-              <h3 className="text-base sm:text-lg font-heading font-black">May Aktibong Live Session sa Silid na Ito!</h3>
+        activeLiveSession.status === 'lobby' ? (
+          <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-linear-to-r from-emerald-500 to-teal-500 text-white font-black shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-bounce">
+            <div className="flex items-center gap-3">
+              <span className="w-3 h-3 rounded-full bg-white animate-ping" />
+              <div>
+                <p className="text-[10px] sm:text-xs uppercase tracking-wider text-emerald-100">LOBBY BUKAS</p>
+                <h3 className="text-base sm:text-lg font-heading font-black">Bukas ang Lobby para sa Live Session!</h3>
+              </div>
             </div>
-          </div>
 
-          <Link
-            href={`/student/classrooms/${id}/live/${activeLiveSession.id}`}
-            className="px-5 sm:px-6 py-2.5 bg-slate-950 hover:bg-slate-900 text-white font-extrabold text-xs rounded-full shadow-md flex items-center justify-center gap-2 self-start sm:self-auto"
-          >
-            <span>Sumali sa Live Session Na ➔</span>
-          </Link>
-        </div>
+            <Link
+              href={`/student/classrooms/${id}/live/${activeLiveSession.id}`}
+              className="px-5 sm:px-6 py-2.5 bg-slate-950 hover:bg-slate-900 text-white font-extrabold text-xs rounded-full shadow-md flex items-center justify-center gap-2 self-start sm:self-auto"
+            >
+              <span>Sumali sa Lobby Na ➔</span>
+            </Link>
+          </div>
+        ) : isParticipant ? (
+          <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-linear-to-r from-amber-500 to-yellow-500 text-slate-950 font-black shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-bounce">
+            <div className="flex items-center gap-3">
+              <span className="w-3 h-3 rounded-full bg-red-600 animate-ping" />
+              <div>
+                <p className="text-[10px] sm:text-xs uppercase tracking-wider text-amber-950">LIVE NGAYON</p>
+                <h3 className="text-base sm:text-lg font-heading font-black">Kasalukuyang Naglalaro ang Klase!</h3>
+              </div>
+            </div>
+
+            <Link
+              href={`/student/classrooms/${id}/live/${activeLiveSession.id}`}
+              className="px-5 sm:px-6 py-2.5 bg-slate-950 hover:bg-slate-900 text-white font-extrabold text-xs rounded-full shadow-md flex items-center justify-center gap-2 self-start sm:self-auto"
+            >
+              <span>Magpatuloy sa Laro ➔</span>
+            </Link>
+          </div>
+        ) : (
+          <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-slate-100 border border-slate-200 text-slate-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+              <div>
+                <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-500 font-bold">SESYON NGAYON</p>
+                <h3 className="text-sm sm:text-base font-heading font-black text-slate-900">
+                  Nagsimula na ang Live Session (Sarado na ang pagsali para sa mga bagong manlalaro)
+                </h3>
+              </div>
+            </div>
+            <span className="text-xs text-slate-500 font-medium">Maghintay sa susunod na sesyon</span>
+          </div>
+        )
       )}
 
       <div>
