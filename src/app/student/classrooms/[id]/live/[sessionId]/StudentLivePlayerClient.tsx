@@ -295,15 +295,16 @@ export function StudentLivePlayerClient({
   if (joinError) {
     const errorLower = joinError.toLowerCase()
     const isPreparing = errorLower.includes('naghahanda') || errorLower.includes('setup') || errorLower.includes('preparing') || errorLower.includes('hindi pa bukas') || currentStatus === 'setup'
-    const isStarted = !isPreparing && (errorLower.includes('already started') || errorLower.includes('in progress'))
-    const isCapacityFull = errorLower.includes('capacity')
-    const isNotEnrolled = errorLower.includes('enrolled') || errorLower.includes('classroom')
-    const isRemovedUser = errorLower.includes('removed')
+    const isEndedSession = errorLower.includes('tapos na') || errorLower.includes('ended') || currentStatus === 'ended'
+    const isStarted = !isPreparing && !isEndedSession && (errorLower.includes('already started') || errorLower.includes('in progress') || errorLower.includes('nagsimula na'))
+    const isCapacityFull = errorLower.includes('capacity') || errorLower.includes('puno na')
+    const isNotEnrolled = errorLower.includes('enrolled') || errorLower.includes('classroom') || errorLower.includes('miyembro')
+    const isRemovedUser = errorLower.includes('removed') || errorLower.includes('inalis')
 
     return (
       <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center max-w-md mx-auto my-12 space-y-6 animate-fade-in">
         <div className={`w-16 h-16 rounded-3xl flex items-center justify-center mx-auto shadow-md ${
-          isPreparing ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'
+          isPreparing ? 'bg-amber-100 text-amber-600' : isEndedSession ? 'bg-slate-100 text-slate-600' : 'bg-rose-100 text-rose-600'
         }`}>
           {isPreparing ? <Clock className="w-8 h-8 animate-pulse" /> : <AlertCircle className="w-8 h-8" />}
         </div>
@@ -311,6 +312,8 @@ export function StudentLivePlayerClient({
           <h2 className="text-2xl font-heading font-black text-slate-900 leading-tight">
             {isPreparing ? (
               <Translate fil="Naghahanda Pa ang Guro" en="Educator is Setting Up" />
+            ) : isEndedSession ? (
+              <Translate fil="Tapos na ang Sesyon" en="Live Session Ended" />
             ) : isStarted ? (
               <Translate fil="Nagsimula na ang Sesyon" en="Session Already In Progress" />
             ) : isCapacityFull ? (
@@ -328,6 +331,11 @@ export function StudentLivePlayerClient({
               <Translate
                 fil="Kasalukuyan pang inihahanda at inaayos ng guro ang mga tanong at gameplay para sa Live Session na ito. Hindi pa bukas ang lobby para sa pagsali. Mangyaring maghintay sa silid-aralan hanggang sa buksan ang opisyal na Lobby."
                 en="The educator is currently configuring the questions and gameplay for this live session. The lobby is not yet open. Please wait in your classroom until the official lobby opens."
+              />
+            ) : isEndedSession ? (
+              <Translate
+                fil="Tapos na ang Live Session na ito ng klase. Maghintay sa susunod na laro o suriin ang iyong mga natapos na pagsusulit."
+                en="This live session has already ended. Please wait for the educator's next session or check your past activities."
               />
             ) : isStarted ? (
               <Translate

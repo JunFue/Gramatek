@@ -2,6 +2,74 @@
 -- Migration 008: Fix Live Session Lobby & Setup Isolation
 -- ============================================================
 
+-- 1. Update create_live_session to automatically end old sessions and create with 'lobby' status
+CREATE OR REPLACE FUNCTION public.create_live_session(
+  p_classroom_id UUID,
+  p_mode TEXT DEFAULT 'individual',
+  p_capacity INTEGER DEFAULT 30,
+  p_pacing TEXT DEFAULT 'manual',
+  p_default_time_limit_seconds INTEGER DEFAULT NULL,
+  p_randomize_choices BOOLEAN DEFAULT false,
+  p_randomize_question_order BOOLEAN DEFAULT false,
+  p_reveal_mode TEXT DEFAULT 'auto_per_question'
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_session_id UUID;
+BEGIN
+  -- Validate educator ownership
+  IF NOT EXISTS (
+    SELECT 1 FROM public.classrooms 
+    WHERE id = p_classroom_id AND educator_id = v_user_id
+  ) THEN
+    RAISE EXCEPTION 'Unauthorized: Only classroom educator can create live sessions.';
+  END IF;
+
+  -- Validate capacity constraint
+  IF p_capacity < 1 OR p_capacity > 50 THEN
+    RAISE EXCEPTION 'Capacity must be between 1 and 50.';
+  END IF;
+
+  -- End any previous unended sessions in this classroom so no stale sessions remain
+  UPDATE public.live_sessions
+  SET status = 'ended'
+  WHERE classroom_id = p_classroom_id AND status != 'ended';
+
+  -- Create new session directly with 'lobby' status
+  INSERT INTO public.live_sessions (
+    classroom_id,
+    status,
+    mode,
+    capacity,
+    pacing,
+    default_time_limit_seconds,
+    randomize_choices,
+    randomize_question_order,
+    reveal_mode,
+    created_by
+  ) VALUES (
+    p_classroom_id,
+    'lobby',
+    p_mode,
+    p_capacity,
+    p_pacing,
+    p_default_time_limit_seconds,
+    p_randomize_choices,
+    p_randomize_question_order,
+    p_reveal_mode,
+    v_user_id
+  ) RETURNING id INTO v_session_id;
+
+  RETURN v_session_id;
+END;
+$$;
+
+
+-- 2. Update join_live_session with precise status validation & clear errors
 CREATE OR REPLACE FUNCTION public.join_live_session(
   p_session_id UUID,
   p_student_id UUID DEFAULT auth.uid()
@@ -26,26 +94,30 @@ BEGIN
   WHERE s.id = p_session_id;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Live session not found.';
+    RAISE EXCEPTION 'Hindi nahanap ang Live Session.';
   END IF;
 
-  -- Disallow joins during setup
+  -- If still in setup
   IF v_session.status = 'setup' THEN
     RAISE EXCEPTION 'Naghahanda pa ang guro ng live session. Mangyaring maghintay bago sumali.';
   END IF;
 
-  -- Status check: If active or ended (question, reveal, ended)
+  -- Status check: If active (question, reveal) or ended
   IF v_session.status NOT IN ('lobby') THEN
     -- If already joined before, allow reconnect
     SELECT * INTO v_existing FROM public.live_session_participants
     WHERE session_id = p_session_id AND student_id = p_student_id;
     
     IF NOT FOUND THEN
-      RAISE EXCEPTION 'Session has already started and is not accepting new joins.';
+      IF v_session.status = 'ended' THEN
+        RAISE EXCEPTION 'Tapos na ang Live Session na ito.';
+      ELSE
+        RAISE EXCEPTION 'Nagsimula na ang sesyon at sarado na ang pagsali.';
+      END IF;
     END IF;
 
     IF v_existing.removed_at IS NOT NULL THEN
-      RAISE EXCEPTION 'You were removed from this session by the educator.';
+      RAISE EXCEPTION 'Inalis ka ng guro mula sa sesyong ito.';
     END IF;
 
     RETURN jsonb_build_object(
@@ -61,7 +133,7 @@ BEGIN
     SELECT 1 FROM public.classroom_members
     WHERE classroom_id = v_session.classroom_id AND student_id = p_student_id
   ) THEN
-    RAISE EXCEPTION 'You must be enrolled in this classroom to join this session.';
+    RAISE EXCEPTION 'Kailangan mong maging miyembro ng silid-aralang ito upang makasali.';
   END IF;
 
   -- Check if previously kicked/removed
@@ -69,7 +141,7 @@ BEGIN
   WHERE session_id = p_session_id AND student_id = p_student_id;
 
   IF FOUND AND v_existing.removed_at IS NOT NULL THEN
-    RAISE EXCEPTION 'You were removed from this session by the educator.';
+    RAISE EXCEPTION 'Inalis ka ng guro mula sa sesyong ito.';
   END IF;
 
   -- Check capacity (atomic count of active participants)
@@ -78,7 +150,7 @@ BEGIN
   WHERE session_id = p_session_id AND removed_at IS NULL;
 
   IF v_active_count >= v_session.capacity AND v_existing IS NULL THEN
-    RAISE EXCEPTION 'Session capacity reached (%/%)', v_active_count, v_session.capacity;
+    RAISE EXCEPTION 'Puno na ang kapasidad ng sesyon (%/%)', v_active_count, v_session.capacity;
   END IF;
 
   -- Insert participant record if new
