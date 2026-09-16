@@ -66,7 +66,7 @@ export default async function ClassroomDetailPage({ params }: { params: Promise<
   }
 
   // 4. Fetch past live sessions in this classroom
-  const { data: liveSessions } = await supabase
+  const { data: liveSessions, error: lsErr } = await supabase
     .from('live_sessions')
     .select(`
       id,
@@ -77,11 +77,15 @@ export default async function ClassroomDetailPage({ params }: { params: Promise<
       live_session_participants (
         student_id,
         total_score,
-        profiles ( full_name )
+        removed_at
       )
     `)
     .eq('classroom_id', id)
     .order('created_at', { ascending: false })
+
+  if (lsErr) {
+    console.error('Error fetching live sessions:', lsErr)
+  }
 
   return (
     <ClassroomManagerClient 

@@ -10,22 +10,33 @@ export default async function EducatorDashboard() {
   const { count: classroomsCount } = await supabase.from('classrooms').select('*', { count: 'exact', head: true }).eq('educator_id', user?.id)
   const { count: quizzesCount } = await supabase.from('quizzes').select('*', { count: 'exact', head: true }).eq('educator_id', user?.id)
 
-  // Fetch any active live sessions in classrooms owned by this educator
-  const { data: activeLiveSessions } = await supabase
-    .from('live_sessions')
-    .select(`
-      id,
-      code,
-      status,
-      mode,
-      created_at,
-      classroom_id,
-      classrooms!inner ( id, name, educator_id ),
-      live_session_participants ( student_id, removed_at )
-    `)
-    .eq('classrooms.educator_id', user?.id)
-    .neq('status', 'ended')
-    .order('created_at', { ascending: false })
+  const { data: allClassrooms } = await supabase
+    .from('classrooms')
+    .select('id, name')
+    .eq('educator_id', user?.id)
+
+  const classroomIds = (allClassrooms || []).map((c: any) => c.id)
+
+  let activeLiveSessions: any[] = []
+  if (classroomIds.length > 0) {
+    const { data: sessions } = await supabase
+      .from('live_sessions')
+      .select(`
+        id,
+        code,
+        status,
+        mode,
+        created_at,
+        classroom_id,
+        classrooms ( id, name ),
+        live_session_participants ( student_id, removed_at )
+      `)
+      .in('classroom_id', classroomIds)
+      .neq('status', 'ended')
+      .order('created_at', { ascending: false })
+
+    activeLiveSessions = sessions || []
+  }
 
   const { data: recentClassrooms } = await supabase
     .from('classrooms')

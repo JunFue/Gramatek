@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
   LayoutDashboard, Users, BarChart3, FileQuestion, 
-  GraduationCap, ChevronLeft, ChevronRight, Menu, X, PlusCircle 
+  GraduationCap, ChevronLeft, ChevronRight, Menu, X, PlusCircle, Zap 
 } from 'lucide-react'
 import { SignOutButton } from '@/components/SignOutButton'
 import { Translate } from '@/components/Translate'
@@ -15,9 +15,16 @@ import { LanguageToggle } from '@/components/LanguageToggle'
 
 interface EducatorSidebarProps {
   profile: any
+  activeSession?: {
+    id: string
+    code?: string
+    status: string
+    classroom_id: string
+    classrooms?: { name: string }
+  } | null
 }
 
-export function EducatorSidebar({ profile }: EducatorSidebarProps) {
+export function EducatorSidebar({ profile, activeSession }: EducatorSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
   const pathname = usePathname()
@@ -127,6 +134,16 @@ export function EducatorSidebar({ profile }: EducatorSidebarProps) {
 
             {/* Navigation Links */}
             <div className="flex-1 overflow-y-auto py-4 space-y-1.5 custom-scrollbar">
+              {activeSession && (
+                <Link
+                  href={`/educator/classrooms/${activeSession.classroom_id}/live/${activeSession.id}/host`}
+                  className="flex items-center gap-3 px-4 py-3 rounded-2xl mx-3 bg-linear-to-r from-amber-500 to-orange-500 text-white font-black text-sm shadow-md ring-2 ring-amber-300 animate-pulse"
+                >
+                  <Zap className="w-5 h-5 fill-white shrink-0" />
+                  <span>Bumalik sa Live Session ➔</span>
+                </Link>
+              )}
+
               <MobileDrawerLink href="/educator" icon={LayoutDashboard} exact>
                 <Translate fil="Dashboard" en="Dashboard" />
               </MobileDrawerLink>
@@ -201,6 +218,19 @@ export function EducatorSidebar({ profile }: EducatorSidebarProps) {
 
         {/* Navigation & Sidebar Actions */}
         <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-2 overflow-x-hidden pt-6 custom-scrollbar">
+          {activeSession && (
+            <Link
+              href={`/educator/classrooms/${activeSession.classroom_id}/live/${activeSession.id}/host`}
+              className={`relative flex items-center gap-2.5 py-3 rounded-2xl bg-linear-to-r from-amber-500 to-orange-500 text-white font-black text-xs shadow-lg ring-2 ring-amber-300 animate-pulse hover:scale-105 active:scale-95 transition-all mx-3 ${
+                isCollapsed ? 'px-0 justify-center mx-2' : 'px-4'
+              }`}
+              title="Bumalik sa Live Session"
+            >
+              <Zap className="w-5 h-5 fill-white shrink-0" />
+              {!isCollapsed && <span className="truncate">Bumalik sa Live ➔</span>}
+            </Link>
+          )}
+
           <DesktopNavLink href="/educator" icon={LayoutDashboard} isCollapsed={isCollapsed} exact>
             <Translate fil="Dashboard" en="Dashboard" />
           </DesktopNavLink>

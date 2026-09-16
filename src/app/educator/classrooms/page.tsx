@@ -9,18 +9,26 @@ export default async function ClassroomsPage() {
 
   const { data: classrooms } = await supabase
     .from('classrooms')
-    .select(`
-      *, 
-      classroom_members(count),
-      live_sessions (
-        id,
-        status,
-        code,
-        mode
-      )
-    `)
+    .select('*, classroom_members(count)')
     .eq('educator_id', user?.id)
     .order('created_at', { ascending: false })
+
+  const classroomIds = (classrooms || []).map((c: any) => c.id)
+
+  let activeSessionsMap: Record<string, any> = {}
+  if (classroomIds.length > 0) {
+    const { data: activeSessions } = await supabase
+      .from('live_sessions')
+      .select('id, status, code, mode, classroom_id')
+      .in('classroom_id', classroomIds)
+      .neq('status', 'ended')
+
+    if (activeSessions) {
+      for (const s of activeSessions) {
+        activeSessionsMap[s.classroom_id] = s
+      }
+    }
+  }
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto animate-fade-in space-y-6 sm:space-y-8 md:space-y-10">
@@ -38,7 +46,7 @@ export default async function ClassroomsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {classrooms && classrooms.length > 0 ? (
           classrooms.map((classroom) => {
-            const activeSession = (classroom.live_sessions || []).find((s: any) => s.status !== 'ended')
+            const activeSession = activeSessionsMap[classroom.id]
 
             return (
               <div key={classroom.id} className={`bg-white border rounded-2xl p-5 sm:p-6 flex flex-col relative overflow-hidden group shadow-md transition-all ${
