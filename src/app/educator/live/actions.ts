@@ -36,18 +36,49 @@ export async function createLiveSessionAction(formData: {
     .eq('classroom_id', formData.classroom_id)
     .neq('status', 'ended')
 
-  // 2. Create Session
-  const { data: sessionId, error: sessionErr } = await supabase.rpc('create_live_session', {
-    p_classroom_id: formData.classroom_id,
-    p_mode: formData.mode,
-    p_capacity: formData.capacity,
-    p_pacing: formData.pacing,
-    p_default_time_limit_seconds: formData.default_time_limit_seconds,
-    p_randomize_choices: formData.randomize_choices,
-    p_randomize_question_order: formData.randomize_question_order,
-    p_reveal_mode: formData.reveal_mode,
-    p_quiz_id: formData.quiz_id || null
-  })
+  // 2. Create Session (with backwards-compatible RPC fallback)
+  let sessionId: string | null = null
+  let sessionErr: any = null
+
+  if (formData.quiz_id) {
+    const resWithQuiz = await supabase.rpc('create_live_session', {
+      p_classroom_id: formData.classroom_id,
+      p_mode: formData.mode,
+      p_capacity: formData.capacity,
+      p_pacing: formData.pacing,
+      p_default_time_limit_seconds: formData.default_time_limit_seconds,
+      p_randomize_choices: formData.randomize_choices,
+      p_randomize_question_order: formData.randomize_question_order,
+      p_reveal_mode: formData.reveal_mode,
+      p_quiz_id: formData.quiz_id
+    })
+    sessionId = resWithQuiz.data
+    sessionErr = resWithQuiz.error
+  }
+
+  // If no quiz_id or if the database doesn't have the p_quiz_id overload yet
+  if (!sessionId) {
+    const resFallback = await supabase.rpc('create_live_session', {
+      p_classroom_id: formData.classroom_id,
+      p_mode: formData.mode,
+      p_capacity: formData.capacity,
+      p_pacing: formData.pacing,
+      p_default_time_limit_seconds: formData.default_time_limit_seconds,
+      p_randomize_choices: formData.randomize_choices,
+      p_randomize_question_order: formData.randomize_question_order,
+      p_reveal_mode: formData.reveal_mode
+    })
+    sessionId = resFallback.data
+    sessionErr = resFallback.error
+
+    // If created and quiz_id was provided, update it on the record
+    if (sessionId && formData.quiz_id) {
+      await supabase
+        .from('live_sessions')
+        .update({ quiz_id: formData.quiz_id })
+        .eq('id', sessionId)
+    }
+  }
 
   if (sessionErr || !sessionId) {
     console.error('Failed to create live session:', sessionErr)
