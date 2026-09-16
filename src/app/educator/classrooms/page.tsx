@@ -15,13 +15,15 @@ export default async function ClassroomsPage() {
 
   const classroomIds = (classrooms || []).map((c: any) => c.id)
 
+  const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
   let activeSessionsMap: Record<string, any> = {}
   if (classroomIds.length > 0) {
     const { data: activeSessions } = await supabase
       .from('live_sessions')
       .select('id, status, mode, classroom_id')
       .in('classroom_id', classroomIds)
-      .neq('status', 'ended')
+      .in('status', ['lobby', 'question', 'reveal'])
+      .gte('created_at', twelveHoursAgo)
 
     if (activeSessions) {
       for (const s of activeSessions) {

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition, useMemo } from 'react'
+import { useState, useTransition, useMemo, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { 
   Users, FileQuestion, ArrowLeft, Plus, Settings, RefreshCw, 
   Star, AlertTriangle, UserMinus, CheckCircle2, X, Edit3, 
@@ -84,6 +85,8 @@ export function ClassroomManagerClient({
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState<TabType>('quizzes')
+  const [liveSessionsList, setLiveSessionsList] = useState(liveSessions)
+  const supabase = createClient()
   
   // Feedback toast
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -92,6 +95,47 @@ export function ClassroomManagerClient({
     setToast({ type, message })
     setTimeout(() => setToast(null), 4000)
   }
+
+  // Sync with prop
+  useEffect(() => {
+    setLiveSessionsList(liveSessions)
+  }, [liveSessions])
+
+  // Realtime subscription for live sessions in this classroom
+  useEffect(() => {
+    if (!classroom.id) return
+
+    const channel = supabase
+      .channel(`classroom-manager-live-sessions-${classroom.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'live_sessions',
+          filter: `classroom_id=eq.${classroom.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as { id: string; status: string; mode: string }
+            setLiveSessionsList((prev) =>
+              prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
+            )
+          } else if (payload.eventType === 'INSERT') {
+            const newRecord = payload.new as any
+            setLiveSessionsList((prev) => [newRecord, ...prev])
+          } else if (payload.eventType === 'DELETE') {
+            const oldRecord = payload.old as { id: string }
+            setLiveSessionsList((prev) => prev.filter((s) => s.id !== oldRecord.id))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [classroom.id, supabase])
 
   // Modals state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -249,7 +293,7 @@ export function ClassroomManagerClient({
   }
 
   const publishedQuizzes = quizzes.filter(q => q.is_published)
-  const activeLiveSession = liveSessions.find(s => s.status !== 'ended')
+  const activeLiveSession = liveSessionsList.find(s => ['lobby', 'question', 'reveal'].includes(s.status))
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto animate-fade-in relative space-y-4 sm:space-y-6">
@@ -445,7 +489,7 @@ export function ClassroomManagerClient({
           <Zap className="w-4 h-4 text-amber-500" />
           <Translate fil="Live Arena Kasaysayan" en="Live Arena History" />
           <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black">
-            {liveSessions.length}
+            {liveSessionsList.length}
           </span>
         </button>
       </div>
@@ -873,9 +917,9 @@ export function ClassroomManagerClient({
             </Link>
           </div>
 
-          {liveSessions.length > 0 ? (
+          {liveSessionsList.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-              {liveSessions.map((session) => (
+              {liveSessionsList.map((session) => (
                 <div key={session.id} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-start mb-2">

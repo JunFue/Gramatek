@@ -13,6 +13,8 @@ import { SidebarNotification } from '@/components/SidebarNotification'
 import { SidebarLanguageToggle } from '@/components/SidebarLanguageToggle'
 import { LanguageToggle } from '@/components/LanguageToggle'
 
+import { createClient } from '@/lib/supabase/client'
+
 interface EducatorSidebarProps {
   profile: any
   activeSession?: {
@@ -27,7 +29,48 @@ interface EducatorSidebarProps {
 export function EducatorSidebar({ profile, activeSession }: EducatorSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
+  const [currentSession, setCurrentSession] = useState(activeSession || null)
   const pathname = usePathname()
+  const supabase = createClient()
+
+  useEffect(() => {
+    if (!activeSession || activeSession.status === 'ended') {
+      setCurrentSession(null)
+    } else {
+      setCurrentSession(activeSession)
+    }
+  }, [activeSession])
+
+  useEffect(() => {
+    if (!currentSession?.id) return
+
+    const channel = supabase
+      .channel(`educator-sidebar-session-${currentSession.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'live_sessions',
+          filter: `id=eq.${currentSession.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as { status?: string }
+            if (updated.status === 'ended') {
+              setCurrentSession(null)
+            }
+          } else if (payload.eventType === 'DELETE') {
+            setCurrentSession(null)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [currentSession?.id, supabase])
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -134,9 +177,9 @@ export function EducatorSidebar({ profile, activeSession }: EducatorSidebarProps
 
             {/* Navigation Links */}
             <div className="flex-1 overflow-y-auto py-4 space-y-1.5 custom-scrollbar">
-              {activeSession && (
+              {currentSession && (
                 <Link
-                  href={`/educator/classrooms/${activeSession.classroom_id}/live/${activeSession.id}/host`}
+                  href={`/educator/classrooms/${currentSession.classroom_id}/live/${currentSession.id}/host`}
                   className="flex items-center gap-3 px-4 py-3 rounded-2xl mx-3 bg-linear-to-r from-amber-500 to-orange-500 text-white font-black text-sm shadow-md ring-2 ring-amber-300 animate-pulse"
                 >
                   <Zap className="w-5 h-5 fill-white shrink-0" />
@@ -218,9 +261,9 @@ export function EducatorSidebar({ profile, activeSession }: EducatorSidebarProps
 
         {/* Navigation & Sidebar Actions */}
         <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-2 overflow-x-hidden pt-6 custom-scrollbar">
-          {activeSession && (
+          {currentSession && (
             <Link
-              href={`/educator/classrooms/${activeSession.classroom_id}/live/${activeSession.id}/host`}
+              href={`/educator/classrooms/${currentSession.classroom_id}/live/${currentSession.id}/host`}
               className={`relative flex items-center gap-2.5 py-3 rounded-2xl bg-linear-to-r from-amber-500 to-orange-500 text-white font-black text-xs shadow-lg ring-2 ring-amber-300 animate-pulse hover:scale-105 active:scale-95 transition-all mx-3 ${
                 isCollapsed ? 'px-0 justify-center mx-2' : 'px-4'
               }`}

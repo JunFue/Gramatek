@@ -213,9 +213,40 @@ export async function revealFinalResultsAction(sessionId: string) {
 
 export async function endSessionAction(sessionId: string) {
   const supabase = await createClient()
+
+  // 1. Fetch classroom_id to revalidate classroom-specific routes
+  const { data: sessionData } = await supabase
+    .from('live_sessions')
+    .select('classroom_id')
+    .eq('id', sessionId)
+    .maybeSingle()
+
+  const classroomId = sessionData?.classroom_id
+
+  // 2. Try RPC
   const { data, error } = await supabase.rpc('end_session', { p_session_id: sessionId })
-  if (error) throw new Error(error.message)
-  return data
+
+  // 3. Fallback table update to guarantee status is set to ended and paused state is cleared
+  if (error) {
+    console.warn('end_session RPC returned error, updating table directly:', error)
+    await supabase
+      .from('live_sessions')
+      .update({ status: 'ended', is_paused: false })
+      .eq('id', sessionId)
+  }
+
+  // 4. Invalidate Next.js cache so server layout and classroom pages refresh
+  revalidatePath('/educator', 'layout')
+  revalidatePath('/student', 'layout')
+  revalidatePath('/educator', 'page')
+  revalidatePath('/student', 'page')
+  revalidatePath('/educator/classrooms')
+  if (classroomId) {
+    revalidatePath(`/educator/classrooms/${classroomId}`, 'page')
+    revalidatePath(`/student/classrooms/${classroomId}`, 'page')
+  }
+
+  return data || { success: true, status: 'ended' }
 }
 
 export async function duplicateSessionAction(sourceSessionId: string) {

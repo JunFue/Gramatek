@@ -17,6 +17,7 @@ export default async function EducatorDashboard() {
 
   const classroomIds = (allClassrooms || []).map((c: any) => c.id)
 
+  const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
   let activeLiveSessions: any[] = []
   if (classroomIds.length > 0) {
     const { data: sessions } = await supabase
@@ -31,7 +32,8 @@ export default async function EducatorDashboard() {
         live_session_participants ( student_id, removed_at )
       `)
       .in('classroom_id', classroomIds)
-      .neq('status', 'ended')
+      .in('status', ['lobby', 'question', 'reveal'])
+      .gte('created_at', twelveHoursAgo)
       .order('created_at', { ascending: false })
 
     activeLiveSessions = sessions || []
