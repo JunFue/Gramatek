@@ -110,7 +110,7 @@ export function HostControlPanelClient({
 
     fetchSubmissions()
 
-    const channel = supabase.channel(`host-submissions-${currentQuestion.id}`)
+    const channel = supabase.channel(`host-submissions-${session.id}-${currentQuestion.id}`)
     channel
       .on(
         'postgres_changes',
@@ -118,18 +118,26 @@ export function HostControlPanelClient({
           event: '*',
           schema: 'public',
           table: 'live_session_answers',
-          filter: `question_id=eq.${currentQuestion.id}`
+          filter: `session_id=eq.${session.id}`
         },
         () => {
           fetchSubmissions()
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          fetchSubmissions()
+        }
+      })
+
+    // Active live polling fallback every 1.5s to guarantee instant response updates
+    const interval = setInterval(fetchSubmissions, 1500)
 
     return () => {
+      clearInterval(interval)
       supabase.removeChannel(channel)
     }
-  }, [currentQuestion, session, supabase])
+  }, [currentQuestion?.id, session?.id, supabase])
 
   const showToast = (type: 'success' | 'error', msg: string) => {
     if (type === 'success') {
