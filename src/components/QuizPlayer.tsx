@@ -84,9 +84,55 @@ export function QuizPlayer({
 
   const currentCardPoints = card?.points || (quiz.id === 'level-2' ? 2 : quiz.id === 'level-3' ? 3 : 1)
 
-  // Load saved answer for currentIdx into active inputs
-  const loadCardState = (idx: number) => {
-    const saved = answersMap[idx]
+  // Helper to check if a specific answer data contains an answer for a card
+  const hasAnswer = (data?: UserAnswerData, targetCard?: any) => {
+    if (!data || !targetCard) return false
+    const qType = targetCard.question_type
+    if (qType === 'multiple_choice' || qType === 'true_false') {
+      return data.selectedAnswer !== null && data.selectedAnswer !== undefined
+    }
+    if (qType === 'fill_blank') {
+      return typeof data.textAnswer === 'string' && data.textAnswer.trim() !== ''
+    }
+    if (qType === 'enumeration') {
+      return Array.isArray(data.enumAnswers) && data.enumAnswers.some(a => typeof a === 'string' && a.trim() !== '')
+    }
+    if (qType === 'word_scramble' || qType === 'sentence_scramble') {
+      return Array.isArray(data.scrambleSelectedIndices) && data.scrambleSelectedIndices.length > 0
+    }
+    return false
+  }
+
+  // Helper to check if current card has an active answer provided in current inputs
+  const hasCurrentAnswer = () => {
+    return hasAnswer({
+      selectedAnswer,
+      textAnswer,
+      enumAnswers,
+      scrambleSelectedIndices
+    }, card)
+  }
+
+  // Check if a specific card index has an answer saved in answersMap or in active state
+  const isCardAnswered = (idx: number, map: Record<number, UserAnswerData> = answersMap) => {
+    if (idx === currentIdx) return hasCurrentAnswer()
+    const saved = map[idx]
+    return hasAnswer(saved, cards[idx])
+  }
+
+  // Check if a card is marked as skipped
+  const isCardSkipped = (idx: number, map: Record<number, UserAnswerData> = answersMap) => {
+    if (idx === currentIdx) {
+      const saved = map[idx]
+      return saved?.isSkipped === true && !hasCurrentAnswer()
+    }
+    const saved = map[idx]
+    return saved?.isSkipped === true && !isCardAnswered(idx, map)
+  }
+
+  // Load saved answer for target index into active inputs
+  const loadCardState = (idx: number, map: Record<number, UserAnswerData> = answersMap) => {
+    const saved = map[idx]
     if (saved) {
       setSelectedAnswer(saved.selectedAnswer !== undefined ? saved.selectedAnswer : null)
       setTextAnswer(saved.textAnswer || '')
@@ -117,78 +163,6 @@ export function QuizPlayer({
     }))
   }
 
-  // Timer Effect
-  useEffect(() => {
-    let timer: NodeJS.Timeout
-    if (hasStarted && !isEvaluating && !isFinished && !eliminated && timeLeft > 0) {
-      timer = setTimeout(() => {
-        setTimeLeft((prev: number) => prev - 1)
-      }, 1000)
-    } else if (timeLeft === 0 && !isEvaluating && !isFinished && !eliminated) {
-      handleTimeOut()
-    }
-    return () => clearTimeout(timer)
-  }, [hasStarted, isEvaluating, isFinished, eliminated, timeLeft])
-
-  const startQuiz = () => {
-    setHasStarted(true)
-    setCurrentIdx(0)
-    setAnswersMap({})
-    setTimeLeft(cards[0]?.time_limit_override || quiz.time_limit_seconds || 15)
-    setScrambleSelectedIndices([])
-    setTextAnswer('')
-    setSelectedAnswer(null)
-  }
-
-  const handleTimeOut = () => {
-    if (isScheduledMode) {
-      // In scheduled mode, mark as skipped or save current answer and advance
-      persistActiveInputs(currentIdx, !hasCurrentAnswer())
-      if (currentIdx < cards.length - 1) {
-        jumpToCard(currentIdx + 1)
-      } else {
-        setIsReviewModalOpen(true)
-      }
-      return
-    }
-
-    setIsEvaluating(true)
-    setIsCorrect(false)
-    processResult(false)
-    setTimeout(() => {
-      goToNextCard()
-    }, isDelayedFeedback ? 400 : 2000)
-  }
-
-  // Helper to check if current card has an answer provided
-  const hasCurrentAnswer = () => {
-    if (card?.question_type === 'multiple_choice' || card?.question_type === 'true_false') return selectedAnswer !== null
-    if (card?.question_type === 'fill_blank') return textAnswer.trim() !== ''
-    if (card?.question_type === 'enumeration') return enumAnswers.some(a => a && a.trim() !== '')
-    if (card?.question_type === 'word_scramble' || card?.question_type === 'sentence_scramble') return scrambleSelectedIndices.length > 0
-    return false
-  }
-
-  // Check if a specific card index has an answer saved in answersMap or in active state
-  const isCardAnswered = (idx: number) => {
-    if (idx === currentIdx) return hasCurrentAnswer()
-    const saved = answersMap[idx]
-    if (!saved) return false
-    const qType = cards[idx]?.question_type
-    if (qType === 'multiple_choice' || qType === 'true_false') return saved.selectedAnswer !== null && saved.selectedAnswer !== undefined
-    if (qType === 'fill_blank') return !!saved.textAnswer && saved.textAnswer.trim() !== ''
-    if (qType === 'enumeration') return !!saved.enumAnswers && saved.enumAnswers.some(a => a && a.trim() !== '')
-    if (qType === 'word_scramble' || qType === 'sentence_scramble') return !!saved.scrambleSelectedIndices && saved.scrambleSelectedIndices.length > 0
-    return false
-  }
-
-  // Check if a card is marked as skipped
-  const isCardSkipped = (idx: number) => {
-    if (idx === currentIdx) return false
-    const saved = answersMap[idx]
-    return saved?.isSkipped === true && !isCardAnswered(idx)
-  }
-
   // Check answer correctness for a single card
   const evaluateCardAnswer = (targetCard: any, answerData: UserAnswerData): { isCorrect: boolean; userAnswerText: string; correctAnswerText: string } => {
     let correct = false
@@ -206,28 +180,30 @@ export function QuizPlayer({
       const targetAns = targetCard.correct_answer
       if (typeof targetAns === 'number') {
         correctText = `${String.fromCharCode(65 + targetAns)}. ${targetCard.options?.[targetAns] || ''}`
-        correct = chosenIdx === targetAns
+        correct = (chosenIdx !== undefined && chosenIdx !== null) && chosenIdx === targetAns
       } else {
         correctText = String(targetAns || '')
         const chosenText = typeof chosenIdx === 'number' ? targetCard.options?.[chosenIdx] : chosenIdx
-        correct = String(chosenText || '').trim().toLowerCase() === correctText.trim().toLowerCase()
+        correct = (chosenIdx !== undefined && chosenIdx !== null) && String(chosenText || '').trim().toLowerCase() === correctText.trim().toLowerCase()
       }
     } else if (targetCard.question_type === 'true_false') {
       const chosen = answerData?.selectedAnswer
-      userText = chosen ? String(chosen).toUpperCase() : 'Walang Sagot / Skipped'
+      const hasChosen = chosen !== undefined && chosen !== null && chosen !== ''
+      userText = hasChosen ? String(chosen).toUpperCase() : 'Walang Sagot / Skipped'
       correctText = String(targetCard.correct_answer || 'TAMA').toUpperCase()
-      correct = userText === correctText
+      correct = hasChosen && userText === correctText
     } else if (targetCard.question_type === 'fill_blank') {
       const normalizeText = (str: string) => (str || '').toLowerCase().replace(/['"’`]/g, "'").trim()
       const cleanText = (str: string) => (str || '').toLowerCase().replace(/[^a-z0-9]/g, '')
       
       const inputStr = answerData?.textAnswer || ''
-      userText = inputStr ? inputStr.trim() : 'Walang Sagot / Skipped'
+      const hasInput = inputStr.trim() !== ''
+      userText = hasInput ? inputStr.trim() : 'Walang Sagot / Skipped'
       correctText = String(targetCard.correct_answer || '')
       
       const userNorm = normalizeText(inputStr)
       const correctNorm = normalizeText(correctText)
-      correct = userNorm === correctNorm || (cleanText(inputStr) !== '' && cleanText(inputStr) === cleanText(correctText))
+      correct = hasInput && (userNorm === correctNorm || (cleanText(inputStr) !== '' && cleanText(inputStr) === cleanText(correctText)))
     } else if (targetCard.question_type === 'enumeration') {
       const userList = (answerData?.enumAnswers || []).map(a => (a || '').trim().toLowerCase()).filter(Boolean)
       userText = userList.length > 0 ? userList.join(', ') : 'Walang Sagot / Skipped'
@@ -249,9 +225,10 @@ export function QuizPlayer({
       const letters = targetCard.options || []
       const indices = answerData?.scrambleSelectedIndices || []
       const userWord = indices.map((i: number) => letters[i] || '').join('').toUpperCase()
-      userText = userWord || 'Walang Sagot / Skipped'
+      const hasWord = indices.length > 0 && userWord.trim() !== ''
+      userText = hasWord ? userWord : 'Walang Sagot / Skipped'
       correctText = String(targetCard.correct_answer || '').toUpperCase().trim()
-      correct = userWord.trim() === correctText
+      correct = hasWord && userWord.trim() === correctText
     } else if (targetCard.question_type === 'sentence_scramble') {
       const normalizeSentence = (str: string) => 
         (str || '').toLowerCase().replace(/['"’“”,.!?\-–—]/g, ' ').replace(/\s+/g, ' ').trim()
@@ -259,151 +236,13 @@ export function QuizPlayer({
       const words = targetCard.options || targetCard.scrambled_words || []
       const indices = answerData?.scrambleSelectedIndices || []
       const userSentence = indices.map((i: number) => words[i] || '').join(' ')
-      userText = userSentence ? userSentence.trim() : 'Walang Sagot / Skipped'
+      const hasSentence = indices.length > 0 && userSentence.trim() !== ''
+      userText = hasSentence ? userSentence.trim() : 'Walang Sagot / Skipped'
       correctText = String(targetCard.correct_answer || targetCard.correct_sentence || '')
-      correct = normalizeSentence(userSentence) === normalizeSentence(correctText)
+      correct = hasSentence && normalizeSentence(userSentence) === normalizeSentence(correctText)
     }
 
     return { isCorrect: correct, userAnswerText: userText, correctAnswerText: correctText }
-  }
-
-  // Answer submission handler for standard / mastery / immediate mode
-  const submitAnswer = () => {
-    if (isEvaluating || isFinished || eliminated) return
-
-    // If Scheduled Mode: we record and either advance or open review
-    if (isScheduledMode) {
-      persistActiveInputs(currentIdx, false)
-      if (currentIdx < cards.length - 1) {
-        jumpToCard(currentIdx + 1)
-      } else {
-        setIsReviewModalOpen(true)
-      }
-      return
-    }
-
-    setIsEvaluating(true)
-    const { isCorrect: correct } = evaluateCardAnswer(card, {
-      selectedAnswer,
-      textAnswer,
-      scrambleSelectedIndices
-    })
-
-    setIsCorrect(correct)
-    processResult(correct)
-
-    setTimeout(() => {
-      goToNextCard()
-    }, isDelayedFeedback ? 300 : 1800)
-  }
-
-  // Skip handler (Scheduled Mode)
-  const handleSkipQuestion = () => {
-    persistActiveInputs(currentIdx, true)
-    if (currentIdx < cards.length - 1) {
-      jumpToCard(currentIdx + 1)
-    } else {
-      setIsReviewModalOpen(true)
-    }
-  }
-
-  // Previous Question handler (Scheduled Mode)
-  const handlePrevQuestion = () => {
-    if (currentIdx > 0) {
-      persistActiveInputs(currentIdx, !hasCurrentAnswer())
-      jumpToCard(currentIdx - 1)
-    }
-  }
-
-  // Jump to specific card
-  const jumpToCard = (targetIdx: number) => {
-    if (targetIdx < 0 || targetIdx >= cards.length) return
-    persistActiveInputs(currentIdx, !hasCurrentAnswer() && isCardSkipped(currentIdx))
-    setCurrentIdx(targetIdx)
-    loadCardState(targetIdx)
-  }
-
-  const processResult = (correct: boolean) => {
-    if (correct) {
-      setScore(s => s + currentCardPoints)
-      setCorrectCount(c => c + 1)
-      const newStreak = currentStreak + 1
-      setCurrentStreak(newStreak)
-      if (newStreak > longestStreak) setLongestStreak(newStreak)
-      
-      const multiplier = isSurvivalMode && quiz.streak_multiplier ? Math.min(1 + Math.floor(newStreak / 3) * 0.5, 3) : 1
-      setStreakScore(s => s + (currentCardPoints * 100 * multiplier))
-    } else {
-      setCurrentStreak(0)
-      if (isSurvivalMode) {
-        const newStrikes = strikes + 1
-        setStrikes(newStrikes)
-        if (newStrikes >= (quiz.survival_strikes || 3)) {
-          setEliminated(true)
-          return
-        }
-      }
-    }
-  }
-
-  const goToNextCard = () => {
-    if (eliminated) {
-      finishQuiz()
-      return
-    }
-
-    if (currentIdx < cards.length - 1) {
-      const nextIdx = currentIdx + 1
-      setCurrentIdx(nextIdx)
-      loadCardState(nextIdx)
-    } else {
-      finishQuiz()
-    }
-  }
-
-  // Final submission for Scheduled Mode
-  const handleFinalScheduledSubmit = () => {
-    setIsReviewModalOpen(false)
-    persistActiveInputs(currentIdx, !hasCurrentAnswer())
-
-    // Evaluate all cards in the test
-    let totalComputedScore = 0
-    let totalCorrectCount = 0
-    const results: any[] = []
-
-    const currentMap = {
-      ...answersMap,
-      [currentIdx]: {
-        selectedAnswer,
-        textAnswer,
-        scrambleSelectedIndices,
-        isSkipped: !hasCurrentAnswer()
-      }
-    }
-
-    cards.forEach((c, idx) => {
-      const answerData = currentMap[idx] || { isSkipped: true }
-      const evalRes = evaluateCardAnswer(c, answerData)
-      const pts = c.points || (quiz.id === 'level-2' ? 2 : quiz.id === 'level-3' ? 3 : 1)
-
-      if (evalRes.isCorrect) {
-        totalComputedScore += pts
-        totalCorrectCount += 1
-      }
-
-      results.push({
-        card: c,
-        userAnswerText: evalRes.userAnswerText,
-        correctAnswerText: evalRes.correctAnswerText,
-        isCorrect: evalRes.isCorrect,
-        points: pts
-      })
-    })
-
-    setScore(totalComputedScore)
-    setCorrectCount(totalCorrectCount)
-    setEvaluatedResults(results)
-    finishQuizWithScore(totalComputedScore, totalCorrectCount, results)
   }
 
   // Finish quiz with explicit scores
@@ -453,7 +292,14 @@ export function QuizPlayer({
           game_mode: quiz.game_mode,
           quiz_title: quiz.title,
           cards_count: cards.length,
-          feedback_timing: quiz.feedback_timing
+          feedback_timing: quiz.feedback_timing,
+          evaluated_results: resultsSummary?.map(r => ({
+            question_id: r.card.id,
+            is_correct: r.isCorrect,
+            user_answer: r.userAnswerText,
+            correct_answer: r.correctAnswerText,
+            points: r.points
+          }))
         },
         {
           game_mode: quiz.game_mode,
@@ -468,29 +314,294 @@ export function QuizPlayer({
     setIsSaving(false)
   }
 
-  const finishQuiz = () => {
-    const finalScore = score + (isCorrect ? currentCardPoints : 0)
-    const finalCorrect = correctCount + (isCorrect ? 1 : 0)
-    
-    // Build results summary for delayed review if not already built
-    if (evaluatedResults.length === 0) {
-      const results = cards.map((c, idx) => {
-        const answerData = idx === currentIdx 
-          ? { selectedAnswer, textAnswer, scrambleSelectedIndices }
-          : answersMap[idx] || {}
-        const evalRes = evaluateCardAnswer(c, answerData)
-        return {
-          card: c,
-          userAnswerText: evalRes.userAnswerText,
-          correctAnswerText: evalRes.correctAnswerText,
-          isCorrect: evalRes.isCorrect,
-          points: c.points || (quiz.id === 'level-2' ? 2 : quiz.id === 'level-3' ? 3 : 1)
-        }
+  // Finalize quiz evaluation and compute exact results without double-counting
+  const finishQuiz = (incomingMap?: Record<number, UserAnswerData>) => {
+    const finalMap = {
+      ...answersMap,
+      ...(incomingMap || {}),
+      [currentIdx]: {
+        selectedAnswer,
+        textAnswer,
+        enumAnswers,
+        scrambleSelectedIndices,
+        isSkipped: !hasCurrentAnswer() && (answersMap[currentIdx]?.isSkipped ?? false)
+      }
+    }
+    setAnswersMap(finalMap)
+
+    let totalComputedScore = 0
+    let totalCorrectCount = 0
+    const results: any[] = []
+
+    cards.forEach((c, idx) => {
+      const answerData = finalMap[idx] || { isSkipped: true }
+      const evalRes = evaluateCardAnswer(c, answerData)
+      const pts = c.points || (quiz.id === 'level-2' ? 2 : quiz.id === 'level-3' ? 3 : 1)
+
+      const reached = !eliminated || idx <= currentIdx
+      const cardCorrect = reached && evalRes.isCorrect
+
+      if (cardCorrect) {
+        totalComputedScore += pts
+        totalCorrectCount += 1
+      }
+
+      results.push({
+        card: c,
+        userAnswerText: evalRes.userAnswerText,
+        correctAnswerText: evalRes.correctAnswerText,
+        isCorrect: cardCorrect,
+        points: pts
       })
-      setEvaluatedResults(results)
+    })
+
+    setScore(totalComputedScore)
+    setCorrectCount(totalCorrectCount)
+    setEvaluatedResults(results)
+    finishQuizWithScore(totalComputedScore, totalCorrectCount, results)
+  }
+
+  const goToNextCard = (incomingMap?: Record<number, UserAnswerData>) => {
+    const map = incomingMap || answersMap
+    if (eliminated) {
+      finishQuiz(map)
+      return
     }
 
-    finishQuizWithScore(finalScore, finalCorrect)
+    if (currentIdx < cards.length - 1) {
+      const nextIdx = currentIdx + 1
+      setCurrentIdx(nextIdx)
+      loadCardState(nextIdx, map)
+    } else {
+      finishQuiz(map)
+    }
+  }
+
+  // Jump to specific card
+  const jumpToCard = (targetIdx: number, incomingMap?: Record<number, UserAnswerData>) => {
+    if (targetIdx < 0 || targetIdx >= cards.length) return
+    const baseMap = incomingMap || answersMap
+    if (targetIdx === currentIdx) return
+
+    const currentCardAnswer: UserAnswerData = {
+      selectedAnswer,
+      textAnswer,
+      enumAnswers,
+      scrambleSelectedIndices,
+      isSkipped: !hasCurrentAnswer() && (baseMap[currentIdx]?.isSkipped ?? false)
+    }
+
+    const updatedMap: Record<number, UserAnswerData> = {
+      ...baseMap,
+      [currentIdx]: currentCardAnswer
+    }
+
+    setAnswersMap(updatedMap)
+    setCurrentIdx(targetIdx)
+    loadCardState(targetIdx, updatedMap)
+  }
+
+  // Skip handler (Scheduled Mode)
+  const handleSkipQuestion = () => {
+    const updatedMap: Record<number, UserAnswerData> = {
+      ...answersMap,
+      [currentIdx]: {
+        selectedAnswer,
+        textAnswer,
+        enumAnswers,
+        scrambleSelectedIndices,
+        isSkipped: true
+      }
+    }
+    setAnswersMap(updatedMap)
+
+    if (currentIdx < cards.length - 1) {
+      jumpToCard(currentIdx + 1, updatedMap)
+    } else {
+      setIsReviewModalOpen(true)
+    }
+  }
+
+  // Previous Question handler (Scheduled Mode)
+  const handlePrevQuestion = () => {
+    if (currentIdx > 0) {
+      jumpToCard(currentIdx - 1)
+    }
+  }
+
+  const processResult = (correct: boolean) => {
+    if (correct) {
+      setScore(s => s + currentCardPoints)
+      setCorrectCount(c => c + 1)
+      const newStreak = currentStreak + 1
+      setCurrentStreak(newStreak)
+      if (newStreak > longestStreak) setLongestStreak(newStreak)
+      
+      const multiplier = isSurvivalMode && quiz.streak_multiplier ? Math.min(1 + Math.floor(newStreak / 3) * 0.5, 3) : 1
+      setStreakScore(s => s + (currentCardPoints * 100 * multiplier))
+    } else {
+      setCurrentStreak(0)
+      if (isSurvivalMode) {
+        const newStrikes = strikes + 1
+        setStrikes(newStrikes)
+        if (newStrikes >= (quiz.survival_strikes || 3)) {
+          setEliminated(true)
+          return
+        }
+      }
+    }
+  }
+
+  const handleTimeOut = () => {
+    const currentCardAnswer: UserAnswerData = {
+      selectedAnswer,
+      textAnswer,
+      enumAnswers,
+      scrambleSelectedIndices,
+      isSkipped: !hasCurrentAnswer()
+    }
+    const updatedMap: Record<number, UserAnswerData> = {
+      ...answersMap,
+      [currentIdx]: currentCardAnswer
+    }
+    setAnswersMap(updatedMap)
+
+    if (isScheduledMode) {
+      if (currentIdx < cards.length - 1) {
+        jumpToCard(currentIdx + 1, updatedMap)
+      } else {
+        setIsReviewModalOpen(true)
+      }
+      return
+    }
+
+    setIsEvaluating(true)
+    const hasAns = hasCurrentAnswer()
+    const evalRes = hasAns ? evaluateCardAnswer(card, currentCardAnswer) : { isCorrect: false }
+    const correct = evalRes.isCorrect
+
+    setIsCorrect(correct)
+    processResult(correct)
+    setTimeout(() => {
+      goToNextCard(updatedMap)
+    }, isDelayedFeedback ? 400 : 2000)
+  }
+
+  // Answer submission handler for standard / mastery / immediate mode
+  const submitAnswer = () => {
+    if (isEvaluating || isFinished || eliminated) return
+
+    const currentCardAnswer: UserAnswerData = {
+      selectedAnswer,
+      textAnswer,
+      enumAnswers,
+      scrambleSelectedIndices,
+      isSkipped: false
+    }
+
+    const updatedMap: Record<number, UserAnswerData> = {
+      ...answersMap,
+      [currentIdx]: currentCardAnswer
+    }
+    setAnswersMap(updatedMap)
+
+    // If Scheduled Mode: advance or open review
+    if (isScheduledMode) {
+      if (currentIdx < cards.length - 1) {
+        jumpToCard(currentIdx + 1, updatedMap)
+      } else {
+        setIsReviewModalOpen(true)
+      }
+      return
+    }
+
+    setIsEvaluating(true)
+    const { isCorrect: correct } = evaluateCardAnswer(card, currentCardAnswer)
+
+    setIsCorrect(correct)
+    processResult(correct)
+
+    setTimeout(() => {
+      goToNextCard(updatedMap)
+    }, isDelayedFeedback ? 300 : 1800)
+  }
+
+  // Final submission for Scheduled Mode
+  const handleFinalScheduledSubmit = () => {
+    setIsReviewModalOpen(false)
+
+    const finalMap = {
+      ...answersMap,
+      [currentIdx]: {
+        selectedAnswer,
+        textAnswer,
+        enumAnswers,
+        scrambleSelectedIndices,
+        isSkipped: !hasCurrentAnswer() && (answersMap[currentIdx]?.isSkipped ?? false)
+      }
+    }
+    setAnswersMap(finalMap)
+
+    let totalComputedScore = 0
+    let totalCorrectCount = 0
+    const results: any[] = []
+
+    cards.forEach((c, idx) => {
+      const answerData = finalMap[idx] || { isSkipped: true }
+      const evalRes = evaluateCardAnswer(c, answerData)
+      const pts = c.points || (quiz.id === 'level-2' ? 2 : quiz.id === 'level-3' ? 3 : 1)
+
+      if (evalRes.isCorrect) {
+        totalComputedScore += pts
+        totalCorrectCount += 1
+      }
+
+      results.push({
+        card: c,
+        userAnswerText: evalRes.userAnswerText,
+        correctAnswerText: evalRes.correctAnswerText,
+        isCorrect: evalRes.isCorrect,
+        points: pts
+      })
+    })
+
+    setScore(totalComputedScore)
+    setCorrectCount(totalCorrectCount)
+    setEvaluatedResults(results)
+    finishQuizWithScore(totalComputedScore, totalCorrectCount, results)
+  }
+
+  // Timer Effect
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+    if (hasStarted && !isEvaluating && !isFinished && !eliminated && timeLeft > 0) {
+      timer = setTimeout(() => {
+        setTimeLeft((prev: number) => prev - 1)
+      }, 1000)
+    } else if (timeLeft === 0 && !isEvaluating && !isFinished && !eliminated) {
+      handleTimeOut()
+    }
+    return () => clearTimeout(timer)
+  }, [hasStarted, isEvaluating, isFinished, eliminated, timeLeft])
+
+  const startQuiz = () => {
+    setHasStarted(true)
+    setCurrentIdx(0)
+    setAnswersMap({})
+    setEvaluatedResults([])
+    setScore(0)
+    setCorrectCount(0)
+    setIsFinished(false)
+    setEliminated(false)
+    setStrikes(0)
+    setCurrentStreak(0)
+    setLongestStreak(0)
+    setStreakScore(0)
+    setTimeLeft(cards[0]?.time_limit_override || quiz.time_limit_seconds || 15)
+    setScrambleSelectedIndices([])
+    setTextAnswer('')
+    setEnumAnswers([])
+    setSelectedAnswer(null)
   }
 
   // Sentence Scramble handlers
@@ -783,7 +894,16 @@ export function QuizPlayer({
            <button
              type="button"
              onClick={() => {
-               persistActiveInputs(currentIdx, !hasCurrentAnswer() && isCardSkipped(currentIdx))
+               setAnswersMap(prev => ({
+                 ...prev,
+                 [currentIdx]: {
+                   selectedAnswer,
+                   textAnswer,
+                   enumAnswers,
+                   scrambleSelectedIndices,
+                   isSkipped: !hasCurrentAnswer() && (prev[currentIdx]?.isSkipped ?? false)
+                 }
+               }))
                setIsReviewModalOpen(true)
              }}
              className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-full text-xs font-bold transition-colors flex items-center gap-1.5 border border-slate-300 cursor-pointer"
@@ -867,7 +987,7 @@ export function QuizPlayer({
              <XCircle className="w-24 h-24 text-rose-500 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(244,63,94,0.3)]" />
              <h2 className="text-4xl font-heading font-black text-slate-900 mb-2"><Translate fil="Tanggal!" en="Eliminated!" /></h2>
              <p className="text-slate-600 font-medium mb-8"><Translate fil="Wala ka nang buhay." en="You ran out of lives." /></p>
-             <button onClick={finishQuiz} className="px-8 py-3 bg-brand-primary hover:bg-slate-700 shadow-md text-white rounded-full font-bold transition-all cursor-pointer">
+             <button onClick={() => finishQuiz()} className="px-8 py-3 bg-brand-primary hover:bg-slate-700 shadow-md text-white rounded-full font-bold transition-all cursor-pointer">
                <Translate fil="Magpatuloy sa Resulta" en="Continue to Results" />
              </button>
            </div>
@@ -921,7 +1041,14 @@ export function QuizPlayer({
                        disabled={isEvaluating}
                        onClick={() => {
                          setSelectedAnswer(idx)
-                         persistActiveInputs(currentIdx, false)
+                         setAnswersMap(prev => ({
+                           ...prev,
+                           [currentIdx]: {
+                             ...prev[currentIdx],
+                             selectedAnswer: idx,
+                             isSkipped: false
+                           }
+                         }))
                        }}
                        className={`p-4 sm:p-5 md:p-6 rounded-2xl border text-left text-sm sm:text-base md:text-lg font-semibold transition-all duration-200 focus:outline-none flex items-center justify-between cursor-pointer ${btnClass}`}
                      >
@@ -967,7 +1094,14 @@ export function QuizPlayer({
                        disabled={isEvaluating}
                        onClick={() => {
                          setSelectedAnswer(choice)
-                         persistActiveInputs(currentIdx, false)
+                         setAnswersMap(prev => ({
+                           ...prev,
+                           [currentIdx]: {
+                             ...prev[currentIdx],
+                             selectedAnswer: choice,
+                             isSkipped: false
+                           }
+                         }))
                        }}
                        className={`p-8 rounded-3xl border-2 text-center text-xl md:text-2xl font-black transition-all duration-200 cursor-pointer ${btnStyle}`}
                      >
@@ -1258,7 +1392,16 @@ export function QuizPlayer({
                  <button
                    type="button"
                    onClick={() => {
-                     persistActiveInputs(currentIdx, !hasCurrentAnswer())
+                     setAnswersMap(prev => ({
+                       ...prev,
+                       [currentIdx]: {
+                         selectedAnswer,
+                         textAnswer,
+                         enumAnswers,
+                         scrambleSelectedIndices,
+                         isSkipped: !hasCurrentAnswer() && (prev[currentIdx]?.isSkipped ?? false)
+                       }
+                     }))
                      setIsReviewModalOpen(true)
                    }}
                    className="px-6 py-3.5 bg-brand-secondary hover:bg-amber-600 text-white rounded-full font-black text-sm tracking-wide shadow-md hover:shadow-lg transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
@@ -1333,11 +1476,15 @@ export function QuizPlayer({
                 [currentIdx]: {
                   selectedAnswer,
                   textAnswer,
+                  enumAnswers,
                   scrambleSelectedIndices,
-                  isSkipped: !hasCurrentAnswer()
+                  isSkipped: !hasCurrentAnswer() && (answersMap[currentIdx]?.isSkipped ?? false)
                 }
               }
-              const answeredCount = cards.filter((_, i) => isCardAnswered(i)).length
+              const answeredCount = cards.filter((c, i) => {
+                if (i === currentIdx) return hasCurrentAnswer()
+                return hasAnswer(currentMap[i], c)
+              }).length
               const unansweredCount = cards.length - answeredCount
 
               return (
@@ -1367,18 +1514,9 @@ export function QuizPlayer({
                   <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2.5 my-2 pr-1">
                     {cards.map((c, idx) => {
                       const ansData = currentMap[idx] || {}
-                      const answered = isCardAnswered(idx)
-                      
-                      let displaySnippet = 'Walang Sagot / Nilaktawan'
-                      if (answered) {
-                        if (c.question_type === 'multiple_choice' && ansData.selectedAnswer !== null && ansData.selectedAnswer !== undefined) {
-                          displaySnippet = `${String.fromCharCode(65 + ansData.selectedAnswer)}. ${c.options?.[ansData.selectedAnswer] || ''}`
-                        } else if (c.question_type === 'fill_blank' && ansData.textAnswer) {
-                          displaySnippet = ansData.textAnswer
-                        } else if (c.question_type === 'sentence_scramble' && ansData.scrambleSelectedIndices) {
-                          displaySnippet = ansData.scrambleSelectedIndices.map((i: number) => c.scrambled_words?.[i] || '').join(' ')
-                        }
-                      }
+                      const answered = idx === currentIdx ? hasCurrentAnswer() : hasAnswer(ansData, c)
+                      const evalRes = evaluateCardAnswer(c, ansData)
+                      const displaySnippet = answered ? evalRes.userAnswerText : 'Walang Sagot / Nilaktawan'
 
                       return (
                         <div 
