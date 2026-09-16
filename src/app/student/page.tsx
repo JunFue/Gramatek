@@ -33,9 +33,97 @@ export default async function StudentDashboard() {
     }
   }
 
+  // Fetch active live sessions for all enrolled classrooms
+  let activeLiveSessions: any[] = []
+  if (enrollments && enrollments.length > 0 && user?.id) {
+    const classroomIds = enrollments.map((e: any) => e.classrooms?.id).filter(Boolean)
+    if (classroomIds.length > 0) {
+      const { data: liveData } = await supabase
+        .from('live_sessions')
+        .select(`
+          id,
+          code,
+          status,
+          mode,
+          classroom_id,
+          classrooms ( id, name ),
+          live_session_participants ( student_id, removed_at )
+        `)
+        .in('classroom_id', classroomIds)
+        .in('status', ['lobby', 'question', 'reveal'])
+        .order('created_at', { ascending: false })
+
+      activeLiveSessions = liveData || []
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto animate-fade-in relative z-10 space-y-6 sm:space-y-8 md:space-y-10">
       
+      {/* Active Live Session Alert Banner for Students */}
+      {activeLiveSessions && activeLiveSessions.length > 0 && (
+        <div className="space-y-3">
+          {activeLiveSessions.map((session) => {
+            const isParticipant = (session.live_session_participants || []).some(
+              (p: any) => p.student_id === user?.id && !p.removed_at
+            )
+            const isLobby = session.status === 'lobby'
+
+            // If question is in progress and student was not already in lobby, skip showing resume
+            if (!isLobby && !isParticipant) {
+              return null
+            }
+
+            return (
+              <div
+                key={session.id}
+                className={`rounded-2xl sm:rounded-3xl p-5 sm:p-6 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in border-2 relative overflow-hidden ${
+                  isLobby 
+                    ? 'bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-600 border-emerald-300' 
+                    : 'bg-linear-to-r from-amber-500 via-orange-500 to-rose-500 border-amber-300'
+                }`}
+              >
+                <div className="flex items-center gap-3.5 relative z-10">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/40 shadow-inner">
+                    <span className="w-4 h-4 rounded-full bg-white animate-ping" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white text-slate-900 shadow-xs">
+                        {isLobby ? '🎉 LOBBY BUKAS' : '🔴 LIVE LARO / SESYON'}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-black/20 text-white border border-white/20">
+                        {session.mode === 'group' ? 'Pangkatang Laban' : 'Indibidwal'}
+                      </span>
+                      {session.code && (
+                        <span className="text-xs font-mono font-black bg-white/20 px-2 py-0.5 rounded-md">
+                          PIN: {session.code}
+                        </span>
+                      )}
+                    </div>
+                    <h2 className="text-lg sm:text-xl font-heading font-black">
+                      {session.classrooms?.name} • {isLobby ? 'May Bukas na Live Session!' : 'Kasalukuyang Naglalaro ang Iyong Klase!'}
+                    </h2>
+                    <p className="text-white/90 text-xs font-semibold mt-0.5">
+                      {isLobby
+                        ? 'Sumali na sa lobby upang maghintay sa pagsisimula ng guro.'
+                        : 'Bumalik sa live session upang ipagpatuloy ang iyong pagsagot.'}
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  href={`/student/classrooms/${session.classroom_id}/live/${session.id}`}
+                  className="px-6 py-3 bg-white hover:bg-slate-100 text-slate-950 font-black text-xs sm:text-sm rounded-full shadow-lg transition-all flex items-center justify-center gap-2 self-start sm:self-auto shrink-0 cursor-pointer active:scale-95"
+                >
+                  <span>{isLobby ? 'Sumali sa Lobby Na ➔' : 'Magpatuloy / Bumalik sa Laro ➔'}</span>
+                </Link>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {/* Top Row: Join Classroom & Welcome Banner */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         {/* Join Classroom Card */}

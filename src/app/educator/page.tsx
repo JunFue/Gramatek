@@ -10,6 +10,23 @@ export default async function EducatorDashboard() {
   const { count: classroomsCount } = await supabase.from('classrooms').select('*', { count: 'exact', head: true }).eq('educator_id', user?.id)
   const { count: quizzesCount } = await supabase.from('quizzes').select('*', { count: 'exact', head: true }).eq('educator_id', user?.id)
 
+  // Fetch any active live sessions in classrooms owned by this educator
+  const { data: activeLiveSessions } = await supabase
+    .from('live_sessions')
+    .select(`
+      id,
+      code,
+      status,
+      mode,
+      created_at,
+      classroom_id,
+      classrooms!inner ( id, name, educator_id ),
+      live_session_participants ( student_id, removed_at )
+    `)
+    .eq('classrooms.educator_id', user?.id)
+    .neq('status', 'ended')
+    .order('created_at', { ascending: false })
+
   const { data: recentClassrooms } = await supabase
     .from('classrooms')
     .select('*')
@@ -19,6 +36,66 @@ export default async function EducatorDashboard() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto animate-fade-in relative z-10 space-y-6 sm:space-y-8 md:space-y-10">
+      {/* Active Live Session Alert Banners */}
+      {activeLiveSessions && activeLiveSessions.length > 0 && (
+        <div className="space-y-3">
+          {activeLiveSessions.map((ls: any) => {
+            const activeCount = (ls.live_session_participants || []).filter((p: any) => !p.removed_at).length
+            const isLobby = ls.status === 'lobby' || ls.status === 'setup'
+            return (
+              <div 
+                key={ls.id} 
+                className="bg-linear-to-r from-amber-500 via-orange-500 to-rose-500 rounded-2xl sm:rounded-3xl p-5 sm:p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in border-2 border-white/30 relative overflow-hidden"
+              >
+                <div className="flex items-center gap-3.5 relative z-10">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/40 shadow-inner">
+                    <span className="w-4 h-4 rounded-full bg-white animate-ping" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white text-orange-600 shadow-xs">
+                        {isLobby ? '⏳ LOBBY BUKAS' : '🔴 LIVE LARO / SESYON'}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-black/20 text-white border border-white/20">
+                        {ls.mode === 'group' ? 'Pangkatang Laban' : 'Indibidwal'}
+                      </span>
+                      {ls.code && (
+                        <span className="text-xs font-mono font-black bg-white/20 px-2 py-0.5 rounded-md">
+                          PIN: {ls.code}
+                        </span>
+                      )}
+                    </div>
+                    <h2 className="text-lg sm:text-xl font-heading font-black">
+                      {ls.classrooms?.name} • May Kasalukuyang Aktibong Live Session!
+                    </h2>
+                    <p className="text-white/90 text-xs font-semibold mt-0.5">
+                      {activeCount} mga mag-aaral ang kasalukuyang nakasali sa sesyong ito.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 relative z-10 self-start md:self-auto shrink-0">
+                  <a
+                    href={`/educator/classrooms/${ls.classroom_id}/live/${ls.id}/display`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2.5 bg-white/20 hover:bg-white/30 text-white font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 border border-white/30 cursor-pointer"
+                  >
+                    <span>Display Screen ↗</span>
+                  </a>
+                  <Link
+                    href={`/educator/classrooms/${ls.classroom_id}/live/${ls.id}/host`}
+                    className="px-5 py-2.5 bg-white hover:bg-amber-50 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <span>Bumalik sa Host Panel ➔</span>
+                  </Link>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       <header>
         <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-brand-primary mb-1 sm:mb-2">
           <Translate fil="Maligayang Pagbabalik!" en="Welcome back!" />

@@ -249,6 +249,7 @@ export function ClassroomManagerClient({
   }
 
   const publishedQuizzes = quizzes.filter(q => q.is_published)
+  const activeLiveSession = liveSessions.find(s => s.status !== 'ended')
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto animate-fade-in relative space-y-4 sm:space-y-6">
@@ -263,6 +264,55 @@ export function ClassroomManagerClient({
           <button onClick={() => setToast(null)} className="opacity-70 hover:opacity-100 ml-2 cursor-pointer">
             <X className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* Active Live Session Alert Banner */}
+      {activeLiveSession && (
+        <div className="bg-linear-to-r from-amber-500 via-orange-500 to-rose-500 rounded-2xl sm:rounded-3xl p-5 sm:p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in border-2 border-white/30 relative overflow-hidden">
+          <div className="flex items-center gap-3.5 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/40 shadow-inner">
+              <span className="w-4 h-4 rounded-full bg-white animate-ping" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white text-orange-600 shadow-xs">
+                  {activeLiveSession.status === 'lobby' || activeLiveSession.status === 'setup' ? '⏳ LOBBY BUKAS' : '🔴 LIVE LARO / SESYON'}
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-black/20 text-white border border-white/20">
+                  {activeLiveSession.mode === 'group' ? 'Pangkatang Laban' : 'Indibidwal'}
+                </span>
+                {activeLiveSession.code && (
+                  <span className="text-xs font-mono font-black bg-white/20 px-2 py-0.5 rounded-md">
+                    PIN: {activeLiveSession.code}
+                  </span>
+                )}
+              </div>
+              <h2 className="text-lg sm:text-xl font-heading font-black">
+                May Kasalukuyang Aktibong Live Session sa Silid na Ito!
+              </h2>
+              <p className="text-white/90 text-xs font-semibold mt-0.5">
+                {(activeLiveSession.live_session_participants || []).length} mga mag-aaral ang kasalukuyang nakatala sa sesyong ito.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 relative z-10 self-start md:self-auto shrink-0">
+            <a
+              href={`/educator/classrooms/${classroom.id}/live/${activeLiveSession.id}/display`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2.5 bg-white/20 hover:bg-white/30 text-white font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 border border-white/30 cursor-pointer"
+            >
+              <span>Display Screen ↗</span>
+            </a>
+            <Link
+              href={`/educator/classrooms/${classroom.id}/live/${activeLiveSession.id}/host`}
+              className="px-5 py-2.5 bg-white hover:bg-amber-50 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <span>Bumalik sa Host Panel ➔</span>
+            </Link>
+          </div>
         </div>
       )}
 
@@ -409,13 +459,23 @@ export function ClassroomManagerClient({
               <Translate fil="Mga Pagsusulit sa Silid" en="Classroom Quizzes" />
             </h2>
             <div className="flex flex-wrap items-center gap-2">
-              <Link 
-                href={`/educator/classrooms/${classroom.id}/live/setup`} 
-                className="px-3.5 sm:px-4 py-1.5 sm:py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs md:text-sm font-black rounded-full transition-all flex items-center gap-1.5 shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
-              >
-                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-200" />
-                <Translate fil="Mag-Live Session" en="Live Session" />
-              </Link>
+              {activeLiveSession ? (
+                <Link 
+                  href={`/educator/classrooms/${classroom.id}/live/${activeLiveSession.id}/host`} 
+                  className="px-3.5 sm:px-4 py-1.5 sm:py-2 bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs md:text-sm font-black rounded-full transition-all flex items-center gap-1.5 shadow-md hover:shadow-lg active:scale-95 cursor-pointer ring-2 ring-emerald-300"
+                >
+                  <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-emerald-200" />
+                  <Translate fil="Bumalik sa Live Session ➔" en="Resume Live Session ➔" />
+                </Link>
+              ) : (
+                <Link 
+                  href={`/educator/classrooms/${classroom.id}/live/setup`} 
+                  className="px-3.5 sm:px-4 py-1.5 sm:py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs md:text-sm font-black rounded-full transition-all flex items-center gap-1.5 shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
+                >
+                  <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-200" />
+                  <Translate fil="Mag-Live Session" en="Live Session" />
+                </Link>
+              )}
               <Link 
                 href={`/educator/quizzes/new?classroom=${classroom.id}`} 
                 className="px-3.5 sm:px-4 py-1.5 sm:py-2 bg-brand-primary hover:bg-slate-600 text-white text-xs md:text-sm font-black rounded-full transition-all flex items-center gap-1.5 sm:gap-2 shadow-md hover:shadow-lg active:scale-95"
@@ -843,13 +903,40 @@ export function ClassroomManagerClient({
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-100 mt-3 flex justify-end">
-                    <Link
-                      href={`/educator/classrooms/${classroom.id}/live/${session.id}/results`}
-                      className="text-xs font-bold text-brand-primary hover:underline flex items-center gap-1"
-                    >
-                      <Translate fil="Tingnan ang Resulta at Ranggo" en="View Standings & Results" /> →
-                    </Link>
+                  <div className="pt-3 border-t border-slate-100 mt-3 flex flex-wrap items-center justify-between gap-2">
+                    {session.status !== 'ended' ? (
+                      <>
+                        <a
+                          href={`/educator/classrooms/${classroom.id}/live/${session.id}/display`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1"
+                        >
+                          Display Screen ↗
+                        </a>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/educator/classrooms/${classroom.id}/live/${session.id}/results`}
+                            className="text-xs font-bold text-slate-600 hover:underline"
+                          >
+                            Resulta
+                          </Link>
+                          <Link
+                            href={`/educator/classrooms/${classroom.id}/live/${session.id}/host`}
+                            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Bumalik sa Host ➔</span>
+                          </Link>
+                        </div>
+                      </>
+                    ) : (
+                      <Link
+                        href={`/educator/classrooms/${classroom.id}/live/${session.id}/results`}
+                        className="text-xs font-bold text-brand-primary hover:underline flex items-center gap-1 ml-auto"
+                      >
+                        <Translate fil="Tingnan ang Resulta at Ranggo" en="View Standings & Results" /> →
+                      </Link>
+                    )}
                   </div>
                 </div>
               ))}

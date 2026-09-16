@@ -73,6 +73,16 @@ export default async function LiveSessionSetupPage({
     }))
   }))
 
+  // 3. Fetch active unended session if any
+  const { data: activeSession } = await supabase
+    .from('live_sessions')
+    .select('id, status, code')
+    .eq('classroom_id', classroomId)
+    .neq('status', 'ended')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto animate-fade-in">
       <SetupWizardClient
@@ -80,6 +90,7 @@ export default async function LiveSessionSetupPage({
         classroomName={classroom.name}
         availableDrafts={availableDrafts}
         duplicateFromId={duplicate_from}
+        activeSession={activeSession || null}
       />
     </div>
   )

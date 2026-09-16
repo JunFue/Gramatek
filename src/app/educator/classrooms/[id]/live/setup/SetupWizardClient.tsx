@@ -40,13 +40,19 @@ interface SetupWizardClientProps {
   classroomName: string
   availableDrafts: QuizDraft[]
   duplicateFromId?: string
+  activeSession?: {
+    id: string
+    status: string
+    code: string
+  } | null
 }
 
 export function SetupWizardClient({
   classroomId,
   classroomName,
   availableDrafts,
-  duplicateFromId
+  duplicateFromId,
+  activeSession
 }: SetupWizardClientProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -237,6 +243,52 @@ export function SetupWizardClient({
         <ArrowLeft className="w-4 h-4" />
         <Translate fil={`Bumalik sa ${classroomName}`} en={`Back to ${classroomName}`} />
       </Link>
+
+      {/* Active Live Session Alert Notice */}
+      {activeSession && (
+        <div className="bg-linear-to-r from-amber-500 via-orange-500 to-rose-500 rounded-3xl p-5 sm:p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in border-2 border-white/30 relative overflow-hidden">
+          <div className="flex items-center gap-3.5 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/40 shadow-inner">
+              <span className="w-4 h-4 rounded-full bg-white animate-ping" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white text-orange-600 shadow-xs">
+                  {activeSession.status === 'lobby' ? '⏳ LOBBY BUKAS' : '🔴 LIVE LARO'}
+                </span>
+                {activeSession.code && (
+                  <span className="text-xs font-mono font-black bg-white/20 px-2 py-0.5 rounded-md">
+                    PIN: {activeSession.code}
+                  </span>
+                )}
+              </div>
+              <h2 className="text-base sm:text-lg font-heading font-black">
+                May Kasalukuyang Aktibong Live Session sa Silid na Ito!
+              </h2>
+              <p className="text-white/90 text-xs font-semibold mt-0.5">
+                Maaari kang bumalik sa umiiral na sesyon o magpatuloy sa ibaba upang magsimula ng bago.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 relative z-10 self-start md:self-auto shrink-0">
+            <a
+              href={`/educator/classrooms/${classroomId}/live/${activeSession.id}/display`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2.5 bg-white/20 hover:bg-white/30 text-white font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 border border-white/30 cursor-pointer"
+            >
+              <span>Display Screen ↗</span>
+            </a>
+            <Link
+              href={`/educator/classrooms/${classroomId}/live/${activeSession.id}/host`}
+              className="px-5 py-2.5 bg-white hover:bg-amber-50 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <span>Bumalik sa Host Panel ➔</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Header Banner */}
       <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-md relative overflow-hidden">
