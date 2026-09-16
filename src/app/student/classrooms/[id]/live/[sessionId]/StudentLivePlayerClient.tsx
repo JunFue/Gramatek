@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { 
   Users, User, Trophy, ShieldAlert, AlertCircle, Clock, 
-  Crown, CheckCircle2, ArrowLeft, Loader2, Sparkles, LogOut
+  Crown, CheckCircle2, ArrowLeft, Loader2, Sparkles, LogOut, Pause
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { Translate } from '@/components/Translate'
@@ -444,6 +444,34 @@ export function StudentLivePlayerClient({
         </div>
       </div>
 
+      {/* Paused / Standby Banner for Student */}
+      {session?.is_paused && (
+        <div className="bg-linear-to-r from-amber-500 to-orange-500 text-white rounded-3xl p-6 shadow-xl border-2 border-amber-300 flex flex-col sm:flex-row items-center gap-4 animate-slide-up">
+          <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 animate-pulse">
+            <Pause className="w-6 h-6 text-white" />
+          </div>
+          <div className="text-center sm:text-left flex-1">
+            <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+              <span className="px-2.5 py-0.5 bg-white/25 rounded-full text-[10px] font-black uppercase tracking-wider">
+                Naka-Pause
+              </span>
+              <span className="text-xs font-bold text-white/90">
+                Standby Mode
+              </span>
+            </div>
+            <h3 className="text-lg font-heading font-black">
+              <Translate fil="Naka-Standby: Sandaling Naka-pause ang Sesyon" en="Standby: Live Session Paused" />
+            </h3>
+            <p className="text-xs text-white/90 font-medium mt-0.5">
+              <Translate
+                fil="Kasalukuyang naka-pause ang pagsusulit habang nagre-reconnect o nag-aayos ang guro. Manatili sa pahinang ito, kusang magpapatuloy ang pagsusulit kapag nag-resume ang guro."
+                en="The live quiz is temporarily paused while the educator reconnects or sets up. Please stay on this page; it will resume automatically."
+              />
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ================= LOBBY PHASE ================= */}
       {isLobby && (
         <div className="space-y-6 animate-fade-in">
@@ -505,6 +533,7 @@ export function StudentLivePlayerClient({
             myAnswer={myAnswer}
             submittedResult={submissionResult}
             readOnly={false}
+            isPaused={session?.is_paused}
             onSubmit={handleSubmitAnswer}
           />
 

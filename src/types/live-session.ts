@@ -21,6 +21,9 @@ export interface LiveSession {
   reveal_mode: LiveSessionRevealMode
   quiz_id?: string | null
   scores_recorded_to_progress?: boolean | null
+  is_paused?: boolean
+  paused_at?: string | null
+  pause_reason?: string | null
   current_question_id: string | null
   question_started_at: string | null
   question_index: number

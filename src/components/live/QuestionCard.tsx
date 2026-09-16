@@ -24,6 +24,7 @@ interface QuestionCardProps {
     points?: number
   } | null
   readOnly?: boolean
+  isPaused?: boolean
   onExpire?: () => void
   onSubmit?: (answer: string) => Promise<void>
 }
@@ -42,6 +43,7 @@ export function QuestionCard({
   myAnswer = null,
   submittedResult = null,
   readOnly = false,
+  isPaused = false,
   onExpire,
   onSubmit
 }: QuestionCardProps) {
@@ -68,7 +70,7 @@ export function QuestionCard({
   }, [question.choices, randomizeChoices, seedKey, question.id])
 
   const handleSubmit = async (answerText: string) => {
-    if (!canSubmit || readOnly || submitted || submitting || !onSubmit || !answerText.trim()) return
+    if (!canSubmit || readOnly || isPaused || submitted || submitting || !onSubmit || !answerText.trim()) return
     setSubmitting(true)
 
     try {
@@ -109,6 +111,7 @@ export function QuestionCard({
               durationSeconds={durationSeconds}
               serverOffset={serverOffset}
               onExpire={onExpire}
+              isPaused={isPaused}
               variant="bar"
             />
           </div>

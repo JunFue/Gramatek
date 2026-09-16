@@ -14,7 +14,8 @@ export function useCountdown(
   startedAt: string | null | undefined,
   durationSeconds: number | null | undefined,
   serverOffset: number = 0,
-  onExpire?: () => void
+  onExpire?: () => void,
+  isPaused: boolean = false
 ): CountdownResult {
   const [timeLeftMs, setTimeLeftMs] = useState<number>(() => {
     if (!startedAt || !durationSeconds) return 0
@@ -29,6 +30,10 @@ export function useCountdown(
   onExpireRef.current = onExpire
 
   useEffect(() => {
+    if (isPaused) {
+      return
+    }
+
     expiredRef.current = false
     if (!startedAt || !durationSeconds || durationSeconds <= 0) {
       setTimeLeftMs(0)
@@ -57,7 +62,7 @@ export function useCountdown(
     update()
     const interval = setInterval(update, 100)
     return () => clearInterval(interval)
-  }, [startedAt, durationSeconds, serverOffset])
+  }, [startedAt, durationSeconds, serverOffset, isPaused])
 
   const totalMs = (durationSeconds || 1) * 1000
   const percentage = durationSeconds ? Math.min(100, Math.max(0, (timeLeftMs / totalMs) * 100)) : 0

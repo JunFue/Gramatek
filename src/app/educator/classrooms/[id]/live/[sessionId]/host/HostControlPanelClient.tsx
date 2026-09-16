@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { 
-  Users, User, Play, SkipForward, ArrowRight, Eye, 
+  Users, User, Play, Pause, SkipForward, ArrowRight, Eye, 
   Trophy, LogOut, ExternalLink, QrCode, Crown, UserMinus, 
   CheckCircle2, Sparkles, RefreshCw, AlertTriangle, Loader2,
   ChevronRight, ArrowLeft, Clock, Check, Award, BookCheck
@@ -27,7 +27,9 @@ import {
   revealAnswerAction,
   revealFinalResultsAction,
   endSessionAction,
-  recordLiveSessionScoresAction
+  recordLiveSessionScoresAction,
+  pauseLiveSessionAction,
+  resumeLiveSessionAction
 } from '@/app/educator/live/actions'
 import { createClient } from '@/lib/supabase/client'
 
@@ -139,6 +141,37 @@ export function HostControlPanelClient({
     }
   }, [currentQuestion?.id, session?.id, supabase])
 
+  // Auto-pause session when educator closes tab or navigates away
+  useEffect(() => {
+    const isSessionActive = session?.status && session.status !== 'ended'
+    if (!isSessionActive) return
+
+    const handleUnload = () => {
+      const payload = JSON.stringify({
+        sessionId: initialSession.id,
+        reason: 'host_disconnected'
+      })
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        navigator.sendBeacon('/api/live/pause', new Blob([payload], { type: 'application/json' }))
+      } else {
+        fetch('/api/live/pause', {
+          method: 'POST',
+          body: payload,
+          headers: { 'Content-Type': 'application/json' },
+          keepalive: true
+        }).catch(() => {})
+      }
+    }
+
+    window.addEventListener('beforeunload', handleUnload)
+    window.addEventListener('pagehide', handleUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload)
+      window.removeEventListener('pagehide', handleUnload)
+    }
+  }, [initialSession.id, session?.status])
+
   const showToast = (type: 'success' | 'error', msg: string) => {
     if (type === 'success') {
       setSuccessToast(msg)
@@ -150,6 +183,28 @@ export function HostControlPanelClient({
   }
 
   // Actions
+  const handlePause = () => {
+    startTransition(async () => {
+      try {
+        await pauseLiveSessionAction(initialSession.id, 'host_manual')
+        showToast('success', 'Naka-pause na ang sesyon. Naka-standby ang mga mag-aaral.')
+      } catch (err: any) {
+        showToast('error', err?.message || 'Nabigo sa pag-pause.')
+      }
+    })
+  }
+
+  const handleResume = () => {
+    startTransition(async () => {
+      try {
+        await resumeLiveSessionAction(initialSession.id)
+        showToast('success', 'Ipinagpatuloy na ang sesyon!')
+      } catch (err: any) {
+        showToast('error', err?.message || 'Nabigo sa pagpapatuloy.')
+      }
+    })
+  }
+
   const handleStartSession = () => {
     startTransition(async () => {
       try {
@@ -343,6 +398,41 @@ export function HostControlPanelClient({
           </a>
         </div>
       </div>
+
+      {/* Paused / Standby Educator Alert Banner */}
+      {session?.is_paused && (
+        <div className="bg-amber-500 text-white rounded-3xl p-6 shadow-xl border-2 border-amber-400 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-slide-up">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
+              <Pause className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <span className="px-3 py-0.5 bg-white/20 rounded-full text-[10px] font-black uppercase tracking-wider mb-1 inline-block">
+                Naka-Pause / Standby
+              </span>
+              <h2 className="text-xl font-heading font-black">
+                <Translate fil="Naka-Pause ang Live Session" en="Live Session is Paused" />
+              </h2>
+              <p className="text-white/90 text-xs font-medium">
+                <Translate
+                  fil="Naka-standby ang screen ng lahat ng mag-aaral at pansamantalang nakahinto ang timer. I-click ang 'Ipagpatuloy' kapag handa na."
+                  en="All student screens are on standby and the timer is frozen. Click 'Resume' when you are ready to continue."
+                />
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={handleResume}
+            className="px-7 py-3.5 bg-white hover:bg-amber-50 text-amber-900 font-heading font-black text-sm rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 disabled:opacity-50"
+          >
+            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-amber-800" />}
+            <Translate fil="Ipagpatuloy ang Sesyon ➔" en="Resume Session ➔" />
+          </button>
+        </div>
+      )}
 
       {/* ================= LOBBY PHASE ================= */}
       {isLobby && (
@@ -568,6 +658,29 @@ export function HostControlPanelClient({
 
               {/* Control Buttons */}
               <div className="flex items-center gap-2">
+                {/* Pause / Resume Button */}
+                {session?.is_paused ? (
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={handleResume}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-full shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-white" />}
+                    <Translate fil="Ipagpatuloy" en="Resume" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={handlePause}
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-full shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Pause className="w-3.5 h-3.5 fill-white" />}
+                    <Translate fil="I-pause" en="Pause" />
+                  </button>
+                )}
+
                 {/* Reveal Answer Button (if manual_per_question) */}
                 {session?.reveal_mode === 'manual_per_question' && (
                   <button
@@ -623,6 +736,7 @@ export function HostControlPanelClient({
                         startedAt={session.question_started_at}
                         durationSeconds={currentQuestion.time_limit_seconds || session.default_time_limit_seconds || 30}
                         serverOffset={serverOffset}
+                        isPaused={session?.is_paused}
                         variant="bar"
                       />
                     </div>

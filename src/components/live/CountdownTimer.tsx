@@ -10,6 +10,7 @@ interface CountdownTimerProps {
   onExpire?: () => void
   variant?: 'ring' | 'bar' | 'compact'
   showIcon?: boolean
+  isPaused?: boolean
 }
 
 export function CountdownTimer({
@@ -18,13 +19,15 @@ export function CountdownTimer({
   serverOffset = 0,
   onExpire,
   variant = 'bar',
-  showIcon = true
+  showIcon = true,
+  isPaused = false
 }: CountdownTimerProps) {
   const { timeLeftSeconds, percentage, isExpired } = useCountdown(
     startedAt,
     durationSeconds,
     serverOffset,
-    onExpire
+    onExpire,
+    isPaused
   )
 
   if (!startedAt || !durationSeconds) {

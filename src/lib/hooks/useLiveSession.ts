@@ -137,6 +137,7 @@ export function useLiveSession(sessionId: string, initialSession?: LiveSession |
 
     if (
       session?.status === 'question' &&
+      !session?.is_paused &&
       session?.pacing === 'timed' &&
       session?.question_started_at &&
       currentQuestion
@@ -163,6 +164,29 @@ export function useLiveSession(sessionId: string, initialSession?: LiveSession |
   }, [session, currentQuestion, sessionId, supabase])
 
   // Host Action RPC Wrappers
+  const pauseSession = useCallback(async (reason: string = 'host_manual') => {
+    const { data, error } = await supabase.rpc('pause_live_session', {
+      p_session_id: sessionId,
+      p_reason: reason
+    })
+    if (error) {
+      // Fallback
+      await supabase.from('live_sessions').update({ is_paused: true, paused_at: new Date().toISOString() }).eq('id', sessionId)
+    }
+    return data
+  }, [sessionId, supabase])
+
+  const resumeSession = useCallback(async () => {
+    const { data, error } = await supabase.rpc('resume_live_session', {
+      p_session_id: sessionId
+    })
+    if (error) {
+      // Fallback
+      await supabase.from('live_sessions').update({ is_paused: false, paused_at: null }).eq('id', sessionId)
+    }
+    return data
+  }, [sessionId, supabase])
+
   const advanceQuestion = useCallback(async () => {
     const { data, error } = await supabase.rpc('advance_question', { p_session_id: sessionId })
     if (error) throw error
@@ -210,6 +234,8 @@ export function useLiveSession(sessionId: string, initialSession?: LiveSession |
     loading,
     error,
     refreshData,
+    pauseSession,
+    resumeSession,
     advanceQuestion,
     goToQuestion,
     revealAnswer,

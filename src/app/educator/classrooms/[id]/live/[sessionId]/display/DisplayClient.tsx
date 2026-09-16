@@ -119,6 +119,24 @@ export function DisplayClient({
         </div>
       </div>
 
+      {/* Standby / Paused Projector Alert Banner */}
+      {session?.is_paused && (
+        <div className="bg-amber-500/20 border-2 border-amber-400/80 rounded-3xl p-6 text-center space-y-2 backdrop-blur-md animate-pulse">
+          <div className="flex items-center justify-center gap-3 text-amber-400">
+            <Clock className="w-6 h-6 animate-spin" />
+            <h3 className="text-xl md:text-2xl font-heading font-black">
+              <Translate fil="NAKA-PAUSE / STANDBY" en="PAUSED / STANDBY" />
+            </h3>
+          </div>
+          <p className="text-amber-200/90 text-sm font-medium">
+            <Translate
+              fil="Kasalukuyang naka-standby ang live session. Magpapatuloy sa sandaling i-resume ng guro."
+              en="Session is currently on standby. It will resume shortly."
+            />
+          </p>
+        </div>
+      )}
+
       {/* ================= LOBBY PHASE ================= */}
       {isLobby && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center my-auto animate-fade-in">
@@ -212,6 +230,7 @@ export function DisplayClient({
                         startedAt={session.question_started_at}
                         durationSeconds={currentQuestion?.time_limit_seconds || session.default_time_limit_seconds || 30}
                         serverOffset={serverOffset}
+                        isPaused={session?.is_paused}
                         variant="compact"
                       />
                     </div>

@@ -238,3 +238,54 @@ export async function recordLiveSessionScoresAction(sessionId: string, record: b
   return data
 }
 
+export async function pauseLiveSessionAction(sessionId: string, reason: string = 'host_disconnected') {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('pause_live_session', {
+    p_session_id: sessionId,
+    p_reason: reason
+  })
+
+  if (error) {
+    // Fallback direct table update if RPC not in schema cache yet
+    const { error: updateErr } = await supabase
+      .from('live_sessions')
+      .update({
+        is_paused: true,
+        paused_at: new Date().toISOString(),
+        pause_reason: reason
+      })
+      .eq('id', sessionId)
+      .neq('status', 'ended')
+
+    if (updateErr) throw new Error(updateErr.message)
+    return { success: true, is_paused: true }
+  }
+
+  return data
+}
+
+export async function resumeLiveSessionAction(sessionId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('resume_live_session', {
+    p_session_id: sessionId
+  })
+
+  if (error) {
+    // Fallback direct table update
+    const { error: updateErr } = await supabase
+      .from('live_sessions')
+      .update({
+        is_paused: false,
+        paused_at: null,
+        pause_reason: null
+      })
+      .eq('id', sessionId)
+
+    if (updateErr) throw new Error(updateErr.message)
+    return { success: true, is_paused: false }
+  }
+
+  return data
+}
+
+
