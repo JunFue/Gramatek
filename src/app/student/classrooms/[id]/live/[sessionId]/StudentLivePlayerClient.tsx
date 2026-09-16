@@ -247,20 +247,29 @@ export function StudentLivePlayerClient({
       isCorrect: res.is_correct,
       points: res.points_awarded
     })
-
-    if (res.is_correct) {
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { y: 0.8 }
-      })
-    }
   }
 
   const currentStatus = session?.status || initialSession.status
   const isLobby = currentStatus === 'lobby'
   const isLive = currentStatus === 'question' || currentStatus === 'reveal'
   const isEnded = currentStatus === 'ended'
+
+  const isQuestionRevealed = !!(
+    currentQuestion?.revealed_at ||
+    session?.results_revealed_at ||
+    (session?.reveal_mode === 'auto_per_question' && currentStatus === 'reveal')
+  )
+
+  // Trigger celebration only when answer is officially revealed and is correct
+  useEffect(() => {
+    if (isQuestionRevealed && submissionResult?.isCorrect) {
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.8 }
+      })
+    }
+  }, [isQuestionRevealed, submissionResult?.isCorrect])
 
   // Render Kicked / Removed Screen
   if (isRemoved) {
@@ -389,13 +398,10 @@ export function StudentLivePlayerClient({
   const isGroupMode = session?.mode === 'group'
   const isLeader = !isGroupMode || Boolean(myGroup && myGroup.leader_id === currentUserId)
   const canSubmit = !isGroupMode || (myGroup ? (!myGroup.leader_id || myGroup.leader_id === currentUserId) : true)
-  const isQuestionRevealed = !!(
-    currentQuestion?.revealed_at ||
-    session?.results_revealed_at ||
-    (session?.reveal_mode === 'auto_per_question' && currentStatus === 'reveal')
-  )
 
   const seedKey = isGroupMode && myParticipant?.group_id ? myParticipant.group_id : currentUserId
+
+  const isScoresHidden = session?.reveal_mode === 'end_of_session' && !session?.results_revealed_at
 
   return (
     <div className="space-y-6">
@@ -426,9 +432,15 @@ export function StudentLivePlayerClient({
               Lider
             </span>
           )}
-          <span className="px-3.5 py-1.5 bg-brand-primary/10 text-brand-primary font-heading font-black text-sm rounded-full">
-            ⭐ {myParticipant?.total_score || 0} pts
-          </span>
+          {isScoresHidden ? (
+            <span className="px-3.5 py-1.5 bg-slate-100 text-slate-600 font-heading font-black text-xs md:text-sm rounded-full flex items-center gap-1">
+              🔒 <Translate fil="Puntos Nakatago" en="Scores Hidden" />
+            </span>
+          ) : (
+            <span className="px-3.5 py-1.5 bg-brand-primary/10 text-brand-primary font-heading font-black text-sm rounded-full">
+              ⭐ {myParticipant?.total_score || 0} pts
+            </span>
+          )}
         </div>
       </div>
 

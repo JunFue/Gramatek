@@ -279,20 +279,18 @@ export function QuestionCard({
         </div>
       )}
 
-      {/* Submission Feedback Banner */}
+      {/* Submission Feedback Banner (Neutral confirmation without leaking points or correctness) */}
       {!readOnly && submitted && !isRevealed && (
-        <div className="mt-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-3 animate-fade-in">
+        <div className="mt-6 p-4 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-between gap-3 animate-fade-in">
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            <span className="text-emerald-900 font-extrabold text-sm">
-              <Translate fil="Naisumite na ang iyong sagot! Naghihintay sa resulta..." en="Your answer is submitted! Waiting for reveal..." />
+            <CheckCircle2 className="w-5 h-5 text-brand-primary shrink-0" />
+            <span className="text-slate-900 font-extrabold text-sm">
+              <Translate fil="Naisumite na ang iyong sagot! Naka-record na sa sesyon." en="Your answer is submitted and recorded for this session." />
             </span>
           </div>
-          {submittedResult?.points !== undefined && submittedResult.points > 0 && (
-            <span className="px-3 py-1 bg-emerald-200 text-emerald-900 rounded-full font-black text-xs">
-              +{submittedResult.points} pts
-            </span>
-          )}
+          <span className="px-3 py-1 bg-brand-primary/20 text-brand-primary rounded-full font-black text-xs">
+            <Translate fil="Naisumite" en="Submitted" />
+          </span>
         </div>
       )}
 
