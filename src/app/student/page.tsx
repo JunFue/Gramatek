@@ -42,11 +42,10 @@ export default async function StudentDashboard() {
         .from('live_sessions')
         .select(`
           id,
-          code,
           status,
           mode,
           classroom_id,
-          classrooms ( id, name ),
+          classrooms ( id, name, enrollment_code ),
           live_session_participants ( student_id, removed_at )
         `)
         .in('classroom_id', classroomIds)
@@ -95,9 +94,9 @@ export default async function StudentDashboard() {
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-black/20 text-white border border-white/20">
                         {session.mode === 'group' ? 'Pangkatang Laban' : 'Indibidwal'}
                       </span>
-                      {session.code && (
+                      {session.classrooms?.enrollment_code && (
                         <span className="text-xs font-mono font-black bg-white/20 px-2 py-0.5 rounded-md">
-                          PIN: {session.code}
+                          PIN: {session.classrooms.enrollment_code}
                         </span>
                       )}
                     </div>

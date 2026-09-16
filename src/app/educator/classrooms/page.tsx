@@ -19,7 +19,7 @@ export default async function ClassroomsPage() {
   if (classroomIds.length > 0) {
     const { data: activeSessions } = await supabase
       .from('live_sessions')
-      .select('id, status, code, mode, classroom_id')
+      .select('id, status, mode, classroom_id')
       .in('classroom_id', classroomIds)
       .neq('status', 'ended')
 

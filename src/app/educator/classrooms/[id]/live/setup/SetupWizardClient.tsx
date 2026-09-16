@@ -43,7 +43,7 @@ interface SetupWizardClientProps {
   activeSession?: {
     id: string
     status: string
-    code: string
+    code?: string
   } | null
 }
 

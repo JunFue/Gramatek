@@ -23,12 +23,11 @@ export default async function EducatorDashboard() {
       .from('live_sessions')
       .select(`
         id,
-        code,
         status,
         mode,
         created_at,
         classroom_id,
-        classrooms ( id, name ),
+        classrooms ( id, name, enrollment_code ),
         live_session_participants ( student_id, removed_at )
       `)
       .in('classroom_id', classroomIds)
@@ -70,9 +69,9 @@ export default async function EducatorDashboard() {
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-black/20 text-white border border-white/20">
                         {ls.mode === 'group' ? 'Pangkatang Laban' : 'Indibidwal'}
                       </span>
-                      {ls.code && (
+                      {ls.classrooms?.enrollment_code && (
                         <span className="text-xs font-mono font-black bg-white/20 px-2 py-0.5 rounded-md">
-                          PIN: {ls.code}
+                          PIN: {ls.classrooms.enrollment_code}
                         </span>
                       )}
                     </div>

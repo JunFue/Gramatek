@@ -76,7 +76,7 @@ export default async function LiveSessionSetupPage({
   // 3. Fetch active unended session if any
   const { data: activeSession } = await supabase
     .from('live_sessions')
-    .select('id, status, code')
+    .select('id, status')
     .eq('classroom_id', classroomId)
     .neq('status', 'ended')
     .order('created_at', { ascending: false })

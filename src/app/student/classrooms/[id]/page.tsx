@@ -58,7 +58,7 @@ export default async function StudentClassroomPage({ params }: { params: Promise
   // 5. Check for active Live Session
   const { data: activeLiveSession } = await supabase
     .from('live_sessions')
-    .select('id, status, mode, code')
+    .select('id, status, mode')
     .eq('classroom_id', id)
     .in('status', ['lobby', 'question', 'reveal'])
     .order('created_at', { ascending: false })
@@ -98,9 +98,9 @@ export default async function StudentClassroomPage({ params }: { params: Promise
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-black/20 text-white border border-white/20">
                     {activeLiveSession.mode === 'group' ? 'Pangkatang Laban' : 'Indibidwal'}
                   </span>
-                  {activeLiveSession.code && (
+                  {classroom.enrollment_code && (
                     <span className="text-xs font-mono font-black bg-white/20 px-2 py-0.5 rounded-md">
-                      PIN: {activeLiveSession.code}
+                      PIN: {classroom.enrollment_code}
                     </span>
                   )}
                 </div>
@@ -130,9 +130,9 @@ export default async function StudentClassroomPage({ params }: { params: Promise
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-black/20 text-white border border-white/20">
                     {activeLiveSession.mode === 'group' ? 'Pangkatang Laban' : 'Indibidwal'}
                   </span>
-                  {activeLiveSession.code && (
+                  {classroom.enrollment_code && (
                     <span className="text-xs font-mono font-black bg-white/20 px-2 py-0.5 rounded-md">
-                      PIN: {activeLiveSession.code}
+                      PIN: {classroom.enrollment_code}
                     </span>
                   )}
                 </div>

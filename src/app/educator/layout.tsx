@@ -34,11 +34,10 @@ export default async function EducatorLayout({
       .from('live_sessions')
       .select(`
         id,
-        code,
         status,
         mode,
         classroom_id,
-        classrooms ( id, name )
+        classrooms ( id, name, enrollment_code )
       `)
       .in('classroom_id', classroomIds)
       .neq('status', 'ended')
@@ -63,9 +62,9 @@ export default async function EducatorLayout({
               <span className="truncate">
                 LIVE SESSION BUKAS: {activeLiveSession.classrooms?.name}
               </span>
-              {activeLiveSession.code && (
+              {activeLiveSession.classrooms?.enrollment_code && (
                 <span className="bg-black/20 px-2 py-0.5 rounded font-mono text-xs shrink-0">
-                  PIN: {activeLiveSession.code}
+                  PIN: {activeLiveSession.classrooms.enrollment_code}
                 </span>
               )}
               <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-slate-900 shrink-0">

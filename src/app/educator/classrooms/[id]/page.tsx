@@ -70,7 +70,6 @@ export default async function ClassroomDetailPage({ params }: { params: Promise<
     .from('live_sessions')
     .select(`
       id,
-      code,
       mode,
       status,
       created_at,

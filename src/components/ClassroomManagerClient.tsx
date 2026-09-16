@@ -61,7 +61,7 @@ interface ClassroomManagerClientProps {
   }>
   liveSessions?: Array<{
     id: string
-    code: string
+    code?: string
     mode: string
     status: string
     created_at: string
@@ -282,9 +282,9 @@ export function ClassroomManagerClient({
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-black/20 text-white border border-white/20">
                   {activeLiveSession.mode === 'group' ? 'Pangkatang Laban' : 'Indibidwal'}
                 </span>
-                {activeLiveSession.code && (
+                {(activeLiveSession.code || classroom.enrollment_code) && (
                   <span className="text-xs font-mono font-black bg-white/20 px-2 py-0.5 rounded-md">
-                    PIN: {activeLiveSession.code}
+                    PIN: {activeLiveSession.code || classroom.enrollment_code}
                   </span>
                 )}
               </div>
@@ -881,7 +881,7 @@ export function ClassroomManagerClient({
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <span className="font-mono text-xs font-bold text-brand-primary bg-brand-light/30 px-2 py-0.5 rounded-md border border-brand-primary/20">
-                          PIN: {session.code}
+                          PIN: {session.code || classroom.enrollment_code}
                         </span>
                         <h4 className="font-heading font-bold text-slate-900 mt-1">
                           Mode: {session.mode === 'group' ? 'Pangkatang Laban (Group)' : 'Indibidwal (Solo)'}
