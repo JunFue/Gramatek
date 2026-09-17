@@ -1,6 +1,8 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, Suspense } from 'react'
+import { MusicProvider } from '@/contexts/MusicContext'
+import { FloatingMusicPlayer } from '@/components/FloatingMusicPlayer'
 
 export type Language = 'fil' | 'en'
 
@@ -37,7 +39,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, t }}>
-      {children}
+      <Suspense fallback={null}>
+        <MusicProvider>
+          {children}
+          <FloatingMusicPlayer />
+        </MusicProvider>
+      </Suspense>
     </LanguageContext.Provider>
   )
 }
+
