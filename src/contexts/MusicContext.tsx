@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 
-export type TrackId = 'playful' | 'quiz' | 'calm' | 'joyful' | 'melancholic' | 'cozy'
+export type TrackId = 'playful' | 'quiz' | 'calm' | 'melancholic' | 'cozy' | 'jazz' | 'rainy'
 
 export interface MusicTrack {
   id: TrackId
@@ -31,17 +31,29 @@ export const TRACKS: Record<TrackId, MusicTrack> = {
     bpm: 78,
     themeColor: 'emerald'
   },
-  joyful: {
-    id: 'joyful',
-    nameFil: 'Masiglang Umaga',
-    nameEn: 'Sunny Joy',
-    descFil: 'Masayang marimba, acoustic plucks, at sumisipol na plawta para sa magandang simula',
-    descEn: 'Cheerful acoustic marimba, plucks, and whistle flute for uplifting vibes',
-    genreFil: 'Acoustic Folk',
-    genreEn: 'Acoustic Joy',
-    src: '/audio/acoustic-joyful.wav',
-    bpm: 116,
+  jazz: {
+    id: 'jazz',
+    nameFil: 'Kapihan sa Hatinggabi',
+    nameEn: 'Midnight Café Jazz',
+    descFil: 'Swung jazz chords, walking upright bass, vibraphone, at brushed drums',
+    descEn: 'Smooth jazz chords, walking upright bass, vibraphone, and brushed drums',
+    genreFil: 'Café Jazz',
+    genreEn: 'Café Jazz',
+    src: '/audio/jazz-cafe.wav',
+    bpm: 84,
     themeColor: 'amber'
+  },
+  rainy: {
+    id: 'rainy',
+    nameFil: 'Huni ng Ulan',
+    nameEn: 'Rainy Afternoon Study',
+    descFil: 'Fingerpicked nylon guitar, banayad na patak ng ulan, at malumanay na piano',
+    descEn: 'Fingerpicked nylon guitar, soothing rain ambience, and gentle felt piano',
+    genreFil: 'Cozy Rain',
+    genreEn: 'Cozy Rain',
+    src: '/audio/cozy-rain.wav',
+    bpm: 72,
+    themeColor: 'teal'
   },
   melancholic: {
     id: 'melancholic',

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { 
   Play, Pause, Volume2, Volume1, VolumeX, 
   Music, ChevronUp, ChevronDown, Zap, Gamepad2, X, SlidersHorizontal,
-  Coffee, Sun, CloudRain, Moon, Sparkles
+  Coffee, CloudRain, Moon, Sparkles, Radio, Umbrella
 } from 'lucide-react'
 import { useMusic, TRACKS, TrackId } from '@/contexts/MusicContext'
 import { useLanguage } from '@/components/Providers'
@@ -58,8 +58,10 @@ export function FloatingMusicPlayer() {
     switch (id) {
       case 'calm':
         return <Coffee className="h-4 w-4" />
-      case 'joyful':
-        return <Sun className="h-4 w-4" />
+      case 'jazz':
+        return <Radio className="h-4 w-4" />
+      case 'rainy':
+        return <Umbrella className="h-4 w-4" />
       case 'melancholic':
         return <CloudRain className="h-4 w-4" />
       case 'cozy':
@@ -80,10 +82,14 @@ export function FloatingMusicPlayer() {
         return isSelected
           ? 'border-emerald-400 bg-emerald-50/90'
           : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30'
-      case 'joyful':
+      case 'jazz':
         return isSelected
           ? 'border-amber-400 bg-amber-50/90'
           : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50/30'
+      case 'rainy':
+        return isSelected
+          ? 'border-teal-400 bg-teal-50/90'
+          : 'border-gray-200 hover:border-teal-300 hover:bg-teal-50/30'
       case 'melancholic':
         return isSelected
           ? 'border-rose-400 bg-rose-50/90'
@@ -109,8 +115,10 @@ export function FloatingMusicPlayer() {
     switch (id) {
       case 'calm':
         return isSelected ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700'
-      case 'joyful':
-        return isSelected ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'
+      case 'jazz':
+        return isSelected ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-700'
+      case 'rainy':
+        return isSelected ? 'bg-teal-600 text-white' : 'bg-teal-100 text-teal-700'
       case 'melancholic':
         return isSelected ? 'bg-rose-500 text-white' : 'bg-rose-100 text-rose-700'
       case 'cozy':
@@ -127,7 +135,8 @@ export function FloatingMusicPlayer() {
   const getPillBg = (id: TrackId) => {
     switch (id) {
       case 'calm': return 'bg-emerald-500'
-      case 'joyful': return 'bg-amber-500'
+      case 'jazz': return 'bg-amber-500'
+      case 'rainy': return 'bg-teal-600'
       case 'melancholic': return 'bg-rose-500'
       case 'cozy': return 'bg-purple-600'
       case 'playful': return 'bg-sky-500'

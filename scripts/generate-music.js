@@ -876,38 +876,294 @@ function generateCozyTrack() {
 }
 
 // ==========================================
-// BATCH EXECUTION: Generate All 6 Tracks
+// TRACK: "Kapihan sa Hatinggabi" (Midnight Café Jazz - 84 BPM)
+// ==========================================
+function generateJazzTrack() {
+  const sampleRate = 44100;
+  const bpm = 84;
+  const secondsPerBeat = 60 / bpm;
+  const barDuration = secondsPerBeat * 4;
+  const bars = 8;
+  const duration = bars * barDuration;
+  const totalSamples = Math.floor(duration * sampleRate);
+  const bufferL = new Float32Array(totalSamples);
+  const bufferR = new Float32Array(totalSamples);
+
+  const jazzChords = [
+    ['F3', 'A3', 'C4', 'E4'],        // Dm9
+    ['F3', 'B3', 'E4', 'A4'],        // G13
+    ['E3', 'G3', 'B3', 'D4'],        // Cmaj9
+    ['G3', 'A#3', 'C#4', 'F4'],      // A7b9
+    ['F3', 'A3', 'C4', 'E4'],        // Dm9
+    ['F3', 'B3', 'D#4', 'G#4'],      // G7alt
+    ['G3', 'B3', 'D4', 'F#4'],       // Em9
+    ['F3', 'A3', 'C4', 'E4']         // Dm9 turnaround
+  ];
+
+  const walkingBass = [
+    'D2', 'F2', 'G#2', 'A2',
+    'G2', 'B2', 'D3', 'Db3',
+    'C2', 'E2', 'G2', 'G#2',
+    'A2', 'C#3', 'E3', 'Eb3',
+    'D2', 'A2', 'C3', 'B2',
+    'G2', 'F2', 'D#2', 'Db2',
+    'E2', 'G2', 'B2', 'C3',
+    'D2', 'F2', 'G2', 'G#2'
+  ];
+
+  const vibeMelody = [
+    { t: 0.5, note: 'E5', dur: 0.6 }, { t: 1.4, note: 'C5', dur: 0.5 }, { t: 2.1, note: 'A4', dur: 0.8 },
+    { t: 3.2, note: 'B4', dur: 0.5 }, { t: 4.0, note: 'E5', dur: 1.0 }, { t: 5.2, note: 'D5', dur: 0.6 },
+    { t: 6.2, note: 'G5', dur: 0.7 }, { t: 7.2, note: 'E5', dur: 0.8 }, { t: 8.2, note: 'D5', dur: 0.6 },
+    { t: 9.2, note: 'C#5', dur: 0.6 }, { t: 10.0, note: 'A#4', dur: 0.7 }, { t: 11.0, note: 'A4', dur: 0.8 },
+    { t: 12.2, note: 'A5', dur: 0.8 }, { t: 13.3, note: 'F5', dur: 0.6 }, { t: 14.1, note: 'E5', dur: 0.5 },
+    { t: 15.0, note: 'D#5', dur: 0.6 }, { t: 16.0, note: 'B4', dur: 0.9 }, { t: 17.2, note: 'G#4', dur: 0.6 },
+    { t: 18.2, note: 'F#5', dur: 0.8 }, { t: 19.3, note: 'D5', dur: 0.7 }, { t: 20.2, note: 'B4', dur: 0.7 },
+    { t: 21.2, note: 'C5', dur: 0.6 }, { t: 22.0, note: 'D5', dur: 0.9 }
+  ];
+
+  function vibraphoneSample(freq, time) {
+    if (time < 0) return 0;
+    const env = Math.exp(-time * 2.8);
+    const tremolo = 1.0 + 0.15 * Math.sin(2 * Math.PI * 4.2 * time);
+    const fundamental = Math.sin(2 * Math.PI * freq * time);
+    const overtone = Math.sin(2 * Math.PI * freq * 3.98 * time) * Math.exp(-time * 12) * 0.25;
+    return (fundamental + overtone) * env * tremolo;
+  }
+
+  function jazzGuitarSample(freq, time) {
+    if (time < 0) return 0;
+    const env = Math.exp(-time * 3.5);
+    const f1 = Math.sin(2 * Math.PI * freq * time);
+    const f2 = Math.sin(2 * Math.PI * freq * 2 * time) * 0.25;
+    return (f1 + f2) * env;
+  }
+
+  function acousticBassSample(freq, time) {
+    if (time < 0) return 0;
+    const attack = 0.008;
+    const env = time < attack ? time / attack : Math.exp(-(time - attack) * 3.2);
+    const thumb = Math.sin(2 * Math.PI * freq * 0.5 * time) * Math.exp(-time * 20) * 0.2;
+    const f1 = triangleWave(freq * time) * 0.65;
+    const f2 = Math.sin(2 * Math.PI * freq * time) * 0.35;
+    return (f1 + f2 + thumb) * env;
+  }
+
+  for (let i = 0; i < totalSamples; i++) {
+    const t = i / sampleRate;
+    const barIndex = Math.floor(t / barDuration) % bars;
+    const barTime = t % barDuration;
+    const beatTime = t % secondsPerBeat;
+    const beatIndex = Math.floor(t / secondsPerBeat) % (bars * 4);
+
+    const bassNote = walkingBass[beatIndex];
+    const bassF = getNoteFreq(bassNote);
+    const bassSample = acousticBassSample(bassF, beatTime) * 0.38;
+
+    let guitarL = 0;
+    let guitarR = 0;
+    const chordNotes = jazzChords[barIndex];
+    const compTriggers = [0, secondsPerBeat * 1.5];
+    for (let c = 0; c < compTriggers.length; c++) {
+      const ct = barTime - compTriggers[c];
+      if (ct >= 0 && ct < 0.6) {
+        for (let n = 0; n < chordNotes.length; n++) {
+          const f = getNoteFreq(chordNotes[n]);
+          const s = jazzGuitarSample(f, ct + n * 0.012) * 0.18;
+          guitarL += s * 0.45;
+          guitarR += s * 0.55;
+        }
+      }
+    }
+
+    let drumL = 0;
+    let drumR = 0;
+    const beatInBar = Math.floor(barTime / secondsPerBeat);
+
+    const swingEighth = secondsPerBeat * 0.66;
+    const isRideMain = beatTime < 0.035;
+    const isRideSwing = (beatInBar === 1 || beatInBar === 3) && beatTime >= swingEighth && (beatTime - swingEighth) < 0.035;
+    if (isRideMain || isRideSwing) {
+      const rt = isRideMain ? beatTime : (beatTime - swingEighth);
+      const rEnv = Math.exp(-rt * 45);
+      const ride = noiseWave() * rEnv * (isRideSwing ? 0.09 : 0.14);
+      drumL += ride * 0.3;
+      drumR += ride * 0.7;
+    }
+
+    if ((beatInBar === 1 || beatInBar === 3) && beatTime < 0.12) {
+      const bEnv = Math.exp(-beatTime * 22);
+      const brush = (noiseWave() * 0.8 + Math.sin(2 * Math.PI * 190 * beatTime) * 0.2) * bEnv * 0.18;
+      drumL += brush * 0.5;
+      drumR += brush * 0.5;
+    }
+
+    if ((beatInBar === 0 || beatInBar === 2) && beatTime < 0.08) {
+      const kEnv = Math.exp(-beatTime * 25);
+      const kick = Math.sin(2 * Math.PI * 65 * beatTime) * kEnv * 0.22;
+      drumL += kick;
+      drumR += kick;
+    }
+
+    let vibeSample = 0;
+    for (let m = 0; m < vibeMelody.length; m++) {
+      const item = vibeMelody[m];
+      const vt = t - item.t;
+      if (vt >= 0 && vt <= item.dur + 0.5) {
+        const f = getNoteFreq(item.note);
+        vibeSample += vibraphoneSample(f, vt) * 0.32;
+      }
+    }
+
+    const roomHum = noiseWave() * 0.005;
+
+    const outL = bassSample + guitarL + drumL + vibeSample * 0.6 + roomHum;
+    const outR = bassSample + guitarR + drumR + vibeSample * 0.6 + roomHum;
+
+    bufferL[i] = Math.tanh(outL * 1.05);
+    bufferR[i] = Math.tanh(outR * 1.05);
+  }
+
+  return encodeWAV(bufferL, bufferR, sampleRate);
+}
+
+// ==========================================
+// TRACK: "Huni ng Ulan" (Rainy Afternoon Study - 72 BPM)
+// ==========================================
+function generateRainyTrack() {
+  const sampleRate = 44100;
+  const bpm = 72;
+  const secondsPerBeat = 60 / bpm;
+  const barDuration = secondsPerBeat * 4;
+  const bars = 8;
+  const duration = bars * barDuration;
+  const totalSamples = Math.floor(duration * sampleRate);
+  const bufferL = new Float32Array(totalSamples);
+  const bufferR = new Float32Array(totalSamples);
+
+  const acousticRoots = ['C2', 'A1', 'F2', 'G1', 'C2', 'A1', 'F2', 'G1'];
+  const nylonChords = [
+    ['C3', 'G3', 'B3', 'E4', 'G4'],
+    ['A2', 'E3', 'G3', 'B3', 'C4'],
+    ['F2', 'C3', 'E3', 'A3', 'C4'],
+    ['G2', 'D3', 'G3', 'B3', 'D4'],
+    ['C3', 'G3', 'B3', 'E4', 'G4'],
+    ['A2', 'E3', 'G3', 'B3', 'C4'],
+    ['F2', 'C3', 'E3', 'A3', 'C4'],
+    ['G2', 'D3', 'G3', 'B3', 'D4']
+  ];
+
+  const rainyPianoMelody = [
+    { t: 0.8, note: 'E5', dur: 1.2 }, { t: 2.2, note: 'G5', dur: 1.0 },
+    { t: 4.2, note: 'B4', dur: 1.2 }, { t: 5.8, note: 'C5', dur: 1.4 },
+    { t: 7.5, note: 'A4', dur: 1.4 }, { t: 9.0, note: 'E5', dur: 1.0 },
+    { t: 10.5, note: 'D5', dur: 2.0 },
+    { t: 13.8, note: 'G5', dur: 1.2 }, { t: 15.2, note: 'E5', dur: 1.0 },
+    { t: 17.5, note: 'C5', dur: 1.5 }, { t: 19.2, note: 'B4', dur: 1.2 },
+    { t: 21.0, note: 'A4', dur: 1.6 }, { t: 22.8, note: 'G4', dur: 1.2 },
+    { t: 24.2, note: 'E4', dur: 2.8 }
+  ];
+
+  function nylonGuitarSample(freq, time) {
+    if (time < 0) return 0;
+    const attack = 0.005;
+    const env = time < attack ? time / attack : Math.exp(-(time - attack) * 4.2);
+    const f1 = Math.sin(2 * Math.PI * freq * time);
+    const f2 = Math.sin(2 * Math.PI * freq * 2.0 * time) * 0.35;
+    const f3 = Math.sin(2 * Math.PI * freq * 3.0 * time) * 0.12;
+    return (f1 + f2 + f3) * env;
+  }
+
+  function feltPianoSoft(freq, time) {
+    if (time < 0) return 0;
+    const env = Math.exp(-time * 1.8);
+    const fundamental = Math.sin(2 * Math.PI * freq * time);
+    const second = Math.sin(2 * Math.PI * freq * 2.0 * time) * 0.3 * Math.exp(-time * 3.5);
+    return (fundamental + second) * env;
+  }
+
+  for (let i = 0; i < totalSamples; i++) {
+    const t = i / sampleRate;
+    const barIndex = Math.floor(t / barDuration) % bars;
+    const barTime = t % barDuration;
+    const sixteenth = secondsPerBeat / 4;
+
+    const chordNotes = nylonChords[barIndex];
+    const sixteenthIndex = Math.floor(barTime / sixteenth) % 16;
+    const timeSinceSixteenth = barTime % sixteenth;
+    const fingerPattern = [0, 1, 2, 3, 1, 2, 3, 4, 0, 2, 3, 4, 1, 2, 3, 2];
+    const noteIdx = fingerPattern[sixteenthIndex] % chordNotes.length;
+    const noteFreq = getNoteFreq(chordNotes[noteIdx]);
+    const guitarNote = nylonGuitarSample(noteFreq, timeSinceSixteenth) * 0.28;
+
+    const rootF = getNoteFreq(acousticRoots[barIndex]);
+    const bassTime = barTime % (secondsPerBeat * 2);
+    const bassEnv = Math.exp(-bassTime * 1.2);
+    const bassSample = sineWave(rootF * t) * bassEnv * 0.35;
+
+    let pianoSample = 0;
+    for (let m = 0; m < rainyPianoMelody.length; m++) {
+      const item = rainyPianoMelody[m];
+      const pt = t - item.t;
+      if (pt >= 0 && pt <= item.dur + 0.8) {
+        const f = getNoteFreq(item.note);
+        pianoSample += feltPianoSoft(f, pt) * 0.35;
+      }
+    }
+
+    const rainTextureL = noiseWave() * 0.018;
+    const rainTextureR = noiseWave() * 0.018;
+    const isDroplet = Math.random() < 0.0004;
+    const droplet = isDroplet ? sineWave(2400 * t) * 0.08 : 0;
+
+    const outL = guitarNote * 0.55 + bassSample + pianoSample * 0.5 + rainTextureL + droplet;
+    const outR = guitarNote * 0.45 + bassSample + pianoSample * 0.5 + rainTextureR + droplet;
+
+    bufferL[i] = Math.tanh(outL * 1.05);
+    bufferR[i] = Math.tanh(outR * 1.05);
+  }
+
+  return encodeWAV(bufferL, bufferR, sampleRate);
+}
+
+// ==========================================
+// BATCH EXECUTION: Generate Active Tracks
 // ==========================================
 console.log('--- Synthesizing Multi-Genre Background Music Library ---');
 
-console.log('1/6: Masayang Laro (Playful Chiptune - 126 BPM)...');
+console.log('1/7: Masayang Laro (Playful Chiptune - 126 BPM)...');
 const playfulWav = generatePlayfulTrack();
 fs.writeFileSync(path.join(outputDir, 'chiptune-playful.wav'), playfulWav);
 console.log(` -> chiptune-playful.wav (${(playfulWav.length / 1024 / 1024).toFixed(2)} MB)`);
 
-console.log('2/6: Bilis-Isip (Quiz Battle Chiptune - 144 BPM)...');
+console.log('2/7: Bilis-Isip (Quiz Battle Chiptune - 144 BPM)...');
 const quizWav = generateQuizTrack();
 fs.writeFileSync(path.join(outputDir, 'chiptune-quiz.wav'), quizWav);
 console.log(` -> chiptune-quiz.wav (${(quizWav.length / 1024 / 1024).toFixed(2)} MB)`);
 
-console.log('3/6: Payapang Pag-aaral (Calm Lo-Fi Study - 78 BPM)...');
+console.log('3/7: Payapang Pag-aaral (Calm Lo-Fi Study - 78 BPM)...');
 const calmWav = generateCalmTrack();
 fs.writeFileSync(path.join(outputDir, 'lofi-calm.wav'), calmWav);
 console.log(` -> lofi-calm.wav (${(calmWav.length / 1024 / 1024).toFixed(2)} MB)`);
 
-console.log('4/6: Masiglang Umaga (Joyful Acoustic Sunshine - 116 BPM)...');
-const joyfulWav = generateJoyfulTrack();
-fs.writeFileSync(path.join(outputDir, 'acoustic-joyful.wav'), joyfulWav);
-console.log(` -> acoustic-joyful.wav (${(joyfulWav.length / 1024 / 1024).toFixed(2)} MB)`);
-
-console.log('5/6: Pagninilay-nilay (Melancholic Piano & Strings - 70 BPM)...');
+console.log('4/7: Pagninilay-nilay (Melancholic Piano & Strings - 70 BPM)...');
 const melancholicWav = generateMelancholicTrack();
 fs.writeFileSync(path.join(outputDir, 'piano-melancholic.wav'), melancholicWav);
 console.log(` -> piano-melancholic.wav (${(melancholicWav.length / 1024 / 1024).toFixed(2)} MB)`);
 
-console.log('6/6: Tahimik na Gabi (Cozy Dreamy Ambient - 84 BPM)...');
+console.log('5/7: Tahimik na Gabi (Cozy Dreamy Ambient - 84 BPM)...');
 const cozyWav = generateCozyTrack();
 fs.writeFileSync(path.join(outputDir, 'ambient-cozy.wav'), cozyWav);
 console.log(` -> ambient-cozy.wav (${(cozyWav.length / 1024 / 1024).toFixed(2)} MB)`);
 
-console.log('=== All 6 Background Music Tracks Generated Successfully! ===');
+console.log('6/7: Kapihan sa Hatinggabi (Midnight Café Jazz - 84 BPM)...');
+const jazzWav = generateJazzTrack();
+fs.writeFileSync(path.join(outputDir, 'jazz-cafe.wav'), jazzWav);
+console.log(` -> jazz-cafe.wav (${(jazzWav.length / 1024 / 1024).toFixed(2)} MB)`);
+
+console.log('7/7: Huni ng Ulan (Rainy Afternoon Study - 72 BPM)...');
+const rainyWav = generateRainyTrack();
+fs.writeFileSync(path.join(outputDir, 'cozy-rain.wav'), rainyWav);
+console.log(` -> cozy-rain.wav (${(rainyWav.length / 1024 / 1024).toFixed(2)} MB)`);
+
+console.log('=== Active Background Music Tracks Generated Successfully! ===');
