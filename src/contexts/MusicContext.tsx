@@ -3,34 +3,93 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 
+export type TrackId = 'playful' | 'quiz' | 'calm' | 'joyful' | 'melancholic' | 'cozy'
+
 export interface MusicTrack {
-  id: 'playful' | 'quiz'
+  id: TrackId
   nameFil: string
   nameEn: string
   descFil: string
   descEn: string
+  genreFil: string
+  genreEn: string
   src: string
   bpm: number
+  themeColor: string
 }
 
-export const TRACKS: Record<'playful' | 'quiz', MusicTrack> = {
+export const TRACKS: Record<TrackId, MusicTrack> = {
+  calm: {
+    id: 'calm',
+    nameFil: 'Payapang Pag-aaral',
+    nameEn: 'Calm Study Beats',
+    descFil: 'Kalmadong Lo-Fi jazz chords at banayad na tambol para sa konsentrasyon',
+    descEn: 'Relaxing Lo-Fi jazz chords and soft beats for deep focus',
+    genreFil: 'Lo-Fi Study',
+    genreEn: 'Lo-Fi Chill',
+    src: '/audio/lofi-calm.wav',
+    bpm: 78,
+    themeColor: 'emerald'
+  },
+  joyful: {
+    id: 'joyful',
+    nameFil: 'Masiglang Umaga',
+    nameEn: 'Sunny Joy',
+    descFil: 'Masayang marimba, acoustic plucks, at sumisipol na plawta para sa magandang simula',
+    descEn: 'Cheerful acoustic marimba, plucks, and whistle flute for uplifting vibes',
+    genreFil: 'Acoustic Folk',
+    genreEn: 'Acoustic Joy',
+    src: '/audio/acoustic-joyful.wav',
+    bpm: 116,
+    themeColor: 'amber'
+  },
+  melancholic: {
+    id: 'melancholic',
+    nameFil: 'Pagninilay-nilay',
+    nameEn: 'Reflections',
+    descFil: 'Madramang acoustic piano, ambient strings, at banayad na pagninilay',
+    descEn: 'Emotional acoustic piano, ambient strings, and gentle contemplation',
+    genreFil: 'Melancholic Piano',
+    genreEn: 'Ambient Piano',
+    src: '/audio/piano-melancholic.wav',
+    bpm: 70,
+    themeColor: 'rose'
+  },
+  cozy: {
+    id: 'cozy',
+    nameFil: 'Tahimik na Gabi',
+    nameEn: 'Cozy Dreamscape',
+    descFil: 'Music box bells, maaliwalas na ambient pads, at pampakalmang himig',
+    descEn: 'Music box bells, warm atmospheric synth pads, and soothing night tones',
+    genreFil: 'Ambient Dream',
+    genreEn: 'Dreamy Ambient',
+    src: '/audio/ambient-cozy.wav',
+    bpm: 84,
+    themeColor: 'purple'
+  },
   playful: {
     id: 'playful',
     nameFil: 'Masayang Laro',
     nameEn: 'Playful Adventure',
-    descFil: 'Masiglang chiptune para sa masayang pag-aaral',
-    descEn: 'Cheerful 8-bit chiptune for fun learning',
+    descFil: 'Masiglang 8-bit chiptune para sa masayang pag-aaral',
+    descEn: 'Cheerful 8-bit chiptune for fun retro gamified learning',
+    genreFil: '8-Bit Chiptune',
+    genreEn: '8-Bit Chiptune',
     src: '/audio/chiptune-playful.wav',
-    bpm: 126
+    bpm: 126,
+    themeColor: 'sky'
   },
   quiz: {
     id: 'quiz',
     nameFil: 'Bilis-Isip',
     nameEn: 'Brain Sprint',
-    descFil: 'Mabilis na chiptune para sa pagsusulit',
-    descEn: 'Fast-paced 8-bit battle chiptune for quizzes',
+    descFil: 'Mabilis at maaksyong chiptune battle para sa pagsusulit',
+    descEn: 'Fast-paced high-energy battle chiptune for quiz countdowns',
+    genreFil: 'Quiz Battle',
+    genreEn: 'Quiz Battle',
     src: '/audio/chiptune-quiz.wav',
-    bpm: 144
+    bpm: 144,
+    themeColor: 'indigo'
   }
 }
 
@@ -38,7 +97,7 @@ interface MusicContextType {
   isPlaying: boolean
   isMuted: boolean
   volume: number
-  currentTrackId: 'playful' | 'quiz'
+  currentTrackId: TrackId
   currentTrack: MusicTrack
   autoQuizMode: boolean
   isQuizRoute: boolean
@@ -46,7 +105,7 @@ interface MusicContextType {
   togglePlay: () => void
   toggleMute: () => void
   setVolume: (vol: number) => void
-  setTrack: (trackId: 'playful' | 'quiz') => void
+  setTrack: (trackId: TrackId) => void
   setAutoQuizMode: (enabled: boolean) => void
 }
 
@@ -55,11 +114,12 @@ const MusicContext = createContext<MusicContextType | undefined>(undefined)
 export function MusicProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const lastRegularTrackRef = useRef<TrackId>('playful')
 
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolumeState] = useState(0.35)
-  const [currentTrackId, setCurrentTrackId] = useState<'playful' | 'quiz'>('playful')
+  const [currentTrackId, setCurrentTrackId] = useState<TrackId>('playful')
   const [autoQuizMode, setAutoQuizModeState] = useState(true)
   const [hasInteracted, setHasInteracted] = useState(false)
 
@@ -104,8 +164,12 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       setAutoQuizModeState(savedAuto === 'true')
     }
 
-    // Default starting track
-    const initialTrack = isQuizRoute ? 'quiz' : 'playful'
+    // Restore chosen track or default
+    const savedTrack = localStorage.getItem('gramatek_bgm_track') as TrackId
+    const validTrack: TrackId = (savedTrack && TRACKS[savedTrack]) ? savedTrack : 'playful'
+    lastRegularTrackRef.current = validTrack !== 'quiz' ? validTrack : 'playful'
+
+    const initialTrack = isQuizRoute ? 'quiz' : validTrack
     setCurrentTrackId(initialTrack)
     audio.src = TRACKS[initialTrack].src
 
@@ -137,7 +201,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!autoQuizMode || !audioRef.current) return
 
-    const targetTrackId: 'playful' | 'quiz' = isQuizRoute ? 'quiz' : 'playful'
+    const targetTrackId: TrackId = isQuizRoute ? 'quiz' : lastRegularTrackRef.current
 
     if (currentTrackId !== targetTrackId) {
       setCurrentTrackId(targetTrackId)
@@ -210,11 +274,16 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   }, [isMuted])
 
   // Track switcher
-  const setTrack = useCallback((trackId: 'playful' | 'quiz') => {
+  const setTrack = useCallback((trackId: TrackId) => {
     const audio = audioRef.current
-    if (!audio) return
+    if (!audio || !TRACKS[trackId]) return
 
     setCurrentTrackId(trackId)
+    if (trackId !== 'quiz') {
+      lastRegularTrackRef.current = trackId
+    }
+    localStorage.setItem('gramatek_bgm_track', trackId)
+
     const shouldKeepPlaying = isPlaying
 
     audio.src = TRACKS[trackId].src
@@ -240,7 +309,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         isMuted,
         volume,
         currentTrackId,
-        currentTrack: TRACKS[currentTrackId],
+        currentTrack: TRACKS[currentTrackId] || TRACKS.playful,
         autoQuizMode,
         isQuizRoute,
         hasInteracted,
