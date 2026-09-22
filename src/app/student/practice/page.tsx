@@ -137,7 +137,7 @@ export default function PracticeHub() {
                 </div>
                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center gap-2">
                   <Clock className="w-4 h-4 text-orange-500 shrink-0" />
-                  <span>{quiz.time_limit_seconds}s / aytem</span>
+                  <span>{quiz.time_limit_seconds >= 60 ? `${quiz.time_limit_seconds / 60}m` : `${quiz.time_limit_seconds}s`} / aytem</span>
                 </div>
               </div>
 

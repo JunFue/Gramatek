@@ -304,10 +304,10 @@ export const PREBUILT_QUIZZES: PrebuiltQuiz[] = [
     level_number: 3,
     title: "ANTAS 3 – PAGBUO NG PANGUNGUSAP",
     subtitle: "Sentence Unscramble",
-    description: "5 katanungan (1 minuto bawat aytem, 3 puntos bawat tama).",
+    description: "5 katanungan (2 minuto bawat aytem, 3 puntos bawat tama).",
     points_per_item: 3,
     total_points: 15,
-    time_limit_seconds: 60,
+    time_limit_seconds: 120,
     cards: [
       {
         id: "q_3_1",

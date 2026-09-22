@@ -664,7 +664,7 @@ export function QuizPlayer({
                 <Award className="w-4 h-4 text-amber-500" /> {totalMaxScore} <Translate fil="Kabuuang Puntos" en="Max Points" />
              </div>
              <div className="flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-full border border-slate-200 shadow-xs">
-                <Clock className="w-4 h-4 text-orange-500" /> {quiz.time_limit_seconds}s <Translate fil="bawat aytem" en="per item" />
+                <Clock className="w-4 h-4 text-orange-500" /> {quiz.time_limit_seconds >= 60 ? `${quiz.time_limit_seconds / 60}m` : `${quiz.time_limit_seconds}s`} <Translate fil="bawat aytem" en="per item" />
              </div>
              <div className="flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-full border border-slate-200 shadow-xs">
                 <Eye className="w-4 h-4 text-slate-500" />
@@ -943,7 +943,11 @@ export function QuizPlayer({
          {/* Timer Badge */}
          <div className="flex items-center gap-2 md:gap-3 bg-slate-100 px-3 md:px-4 py-1.5 md:py-2 rounded-2xl border border-slate-200 shadow-xs">
            <Clock className={`w-4 h-4 md:w-5 md:h-5 ${timeLeft <= 5 ? 'text-rose-500 animate-pulse' : 'text-slate-600'}`} />
-           <span className={`font-mono text-base md:text-xl font-black ${timeLeft <= 5 ? 'text-rose-600 font-black' : 'text-slate-900'}`}>{timeLeft}s</span>
+           <span className={`font-mono text-base md:text-xl font-black ${timeLeft <= 5 ? 'text-rose-600 font-black' : 'text-slate-900'}`}>
+             {timeLeft >= 60 
+               ? `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}` 
+               : `${timeLeft}s`}
+           </span>
          </div>
       </header>
 
