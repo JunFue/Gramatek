@@ -7,7 +7,7 @@ import {
   Loader2, Play, FileQuestion, Zap, Shield, HeartPulse, 
   Flame, Trophy, CalendarClock, RotateCcw, Award, Sparkles,
   SkipForward, CheckSquare, ListChecks, HelpCircle, AlertTriangle,
-  Eye, CornerDownRight, X
+  Eye, CornerDownRight, X, Lightbulb
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -815,6 +815,14 @@ export function QuizPlayer({
                             <span className="text-emerald-700 font-bold">{item.correctAnswerText}</span>
                           </p>
                         )}
+                        {item.card.root_word && (
+                          <p className="text-slate-500 font-semibold">
+                            <Translate fil="Salitang-ugat" en="Root word" />:{' '}
+                            <span className="font-mono font-bold text-amber-700 uppercase bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                              {item.card.root_word}
+                            </span>
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1112,44 +1120,77 @@ export function QuizPlayer({
                </div>
              )}
 
-             {/* 3. Fill in the Blank */}
-             {card?.question_type === 'fill_blank' && (
-               <div className="max-w-lg mx-auto text-center space-y-6">
-                 <input 
-                   type="text" 
-                   value={textAnswer}
-                   onChange={(e) => {
-                     const val = e.target.value.toUpperCase()
-                     setTextAnswer(val)
-                     setAnswersMap(prev => ({
-                       ...prev,
-                       [currentIdx]: { ...prev[currentIdx], textAnswer: val, isSkipped: false }
-                     }))
-                   }}
-                   disabled={isEvaluating}
-                   placeholder="I-type ang buong salita..."
-                   className={`w-full bg-white border-2 rounded-2xl px-6 py-4 text-xl md:text-2xl font-black text-center tracking-wider shadow-xs focus:outline-none transition-all uppercase ${
-                     isEvaluating && !isDelayedFeedback
-                       ? isCorrect 
-                         ? 'border-emerald-500 text-emerald-700 bg-emerald-50' 
-                         : 'border-rose-500 text-rose-700 bg-rose-50'
-                       : 'border-slate-300 text-slate-900 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20'
-                   }`}
-                   onKeyDown={(e) => {
-                     if (e.key === 'Enter' && textAnswer.trim()) submitAnswer()
-                   }}
-                   autoFocus
-                 />
+              {/* 3. Fill in the Blank */}
+              {card?.question_type === 'fill_blank' && (
+                <div className="max-w-lg mx-auto text-center space-y-5">
+                  {/* Root Word & Clue Hint Box */}
+                  {(card.root_word || card.pattern_clue || card.hint) && (
+                    <div className="bg-amber-50/90 border-2 border-amber-200/80 rounded-2xl p-4 text-center shadow-xs space-y-2 animate-fade-in">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100/90 text-amber-800 text-xs font-black rounded-full uppercase tracking-wider">
+                        <Lightbulb className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <Translate fil="Pahiwatig / Clue" en="Hint / Clue" />
+                      </div>
+                      
+                      {card.root_word && (
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-xs md:text-sm font-extrabold text-slate-700">
+                            <Translate fil="Salitang-ugat" en="Root word" />:
+                          </span>
+                          <span className="px-3 py-1 bg-white border border-amber-300 text-brand-primary font-mono font-black text-sm md:text-base rounded-xl shadow-xs tracking-wider uppercase">
+                            {card.root_word}
+                          </span>
+                        </div>
+                      )}
 
-                 {isEvaluating && !isDelayedFeedback && !isCorrect && (
-                   <div className="mt-4 flex flex-col items-center animate-fade-in">
-                      <p className="text-slate-800 font-bold shadow-xs inline-block px-4 py-2 bg-rose-50 border border-rose-200 rounded-xl text-sm">
-                        <Translate fil="Tamang sagot" en="Correct answer" />: <strong className="text-emerald-700">{card.correct_answer}</strong>
-                      </p>
-                   </div>
-                 )}
-               </div>
-             )}
+                      {card.pattern_clue && (
+                        <p className="text-xs font-mono font-bold text-slate-500 tracking-widest">
+                          Pormat: <span className="text-slate-800 font-black">{card.pattern_clue}</span>
+                        </p>
+                      )}
+
+                      {card.hint && (
+                        <p className="text-xs font-medium text-amber-800">
+                          {card.hint}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <input 
+                    type="text" 
+                    value={textAnswer}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase()
+                      setTextAnswer(val)
+                      setAnswersMap(prev => ({
+                        ...prev,
+                        [currentIdx]: { ...prev[currentIdx], textAnswer: val, isSkipped: false }
+                      }))
+                    }}
+                    disabled={isEvaluating}
+                    placeholder="I-type ang buong salita..."
+                    className={`w-full bg-white border-2 rounded-2xl px-6 py-4 text-xl md:text-2xl font-black text-center tracking-wider shadow-xs focus:outline-none transition-all uppercase ${
+                      isEvaluating && !isDelayedFeedback
+                        ? isCorrect 
+                          ? 'border-emerald-500 text-emerald-700 bg-emerald-50' 
+                          : 'border-rose-500 text-rose-700 bg-rose-50'
+                        : 'border-slate-300 text-slate-900 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20'
+                    }`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && textAnswer.trim()) submitAnswer()
+                    }}
+                    autoFocus
+                  />
+
+                  {isEvaluating && !isDelayedFeedback && !isCorrect && (
+                    <div className="mt-4 flex flex-col items-center animate-fade-in">
+                       <p className="text-slate-800 font-bold shadow-xs inline-block px-4 py-2 bg-rose-50 border border-rose-200 rounded-xl text-sm">
+                         <Translate fil="Tamang sagot" en="Correct answer" />: <strong className="text-emerald-700">{card.correct_answer}</strong>
+                       </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
              {/* 4. Enumeration */}
              {card?.question_type === 'enumeration' && (

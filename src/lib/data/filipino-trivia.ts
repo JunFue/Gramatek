@@ -40,6 +40,8 @@ export interface PrebuiltQuizCard {
   options?: string[];
   correct_answer?: number | string;
   pattern_clue?: string;
+  root_word?: string;
+  hint?: string;
   sentence_prompt?: string;
   scrambled_words?: string[];
   correct_sentence?: string;
@@ -209,6 +211,7 @@ export const PREBUILT_QUIZZES: PrebuiltQuiz[] = [
         question_type: "fill_blank",
         question_text: "_____________ ang bata sa kaniyang mga magulang nang makalimutan siyang pasalubungan.",
         pattern_clue: "_ _ G T A _ _ O",
+        root_word: "tampo",
         correct_answer: "NAGTAMPO",
         points: 2
       },
@@ -217,6 +220,7 @@ export const PREBUILT_QUIZZES: PrebuiltQuiz[] = [
         question_type: "fill_blank",
         question_text: "Isang araw nabalitaan ni Ana mula sa kaniyang mga kaklase ang ________________ sa scholarship program sa kolehiyo na ibinibigay sa mga magsisipagtapos.",
         pattern_clue: "_ _ N _ K O _",
+        root_word: "tungkol",
         correct_answer: "TUNGKOL",
         points: 2
       },
@@ -225,30 +229,34 @@ export const PREBUILT_QUIZZES: PrebuiltQuiz[] = [
         question_type: "fill_blank",
         question_text: "May mga pinipiling umupo sa unahan __________________ ang iba naman ay kampante sa pag-upo sa likuran.",
         pattern_clue: "S _ _ A N _ A _ A",
+        root_word: "samantala",
         correct_answer: "SAMANTALA",
         points: 2
       },
       {
         id: "q_2_4",
         question_type: "fill_blank",
-        question_text: "Gumawa si Magbabaya ng pitong pigura ng tao na kawangis niya, at ibiniin kaay Dadanhayan aanng anim.",
+        question_text: "Gumawa si Magbabaya ng pitong pigura ng tao na ____________ niya, at ibinigay kay Dadanhayan ang anim.",
         pattern_clue: "_ A _ U _ H A",
+        root_word: "mukha",
         correct_answer: "KAMUKHA",
         points: 2
       },
       {
         id: "q_2_5",
         question_type: "fill_blank",
-        question_text: "Bago umalis ang ina, inihele niya ang kaniyang mga anak at sinabihan ang kaniyang asawa na bantayan sila.",
+        question_text: "Bago umalis ang ina, ____________ niya ang kaniyang mga anak at sinabihan ang kaniyang asawa na bantayan sila.",
         pattern_clue: "_ I N _ T U _ _ G",
+        root_word: "tulog",
         correct_answer: "PINATULOG",
         points: 2
       },
       {
         id: "q_2_6",
         question_type: "fill_blank",
-        question_text: "Sa paglipas ng mga araw ay humupa na ang baha.",
+        question_text: "Sa paglipas ng mga araw ay ____________ na ang baha.",
         pattern_clue: "_ A W _ _ A",
+        root_word: "wala",
         correct_answer: "NAWALA",
         points: 2
       },
@@ -257,14 +265,16 @@ export const PREBUILT_QUIZZES: PrebuiltQuiz[] = [
         question_type: "fill_blank",
         question_text: "Ayaw ni Potri Intantiyaya na magpakasal, ___________ siya’y bata pa.",
         pattern_clue: "_ A L _ _ H _ S A",
+        root_word: "bihasa",
         correct_answer: "PALIBHASA",
         points: 2
       },
       {
         id: "q_2_8",
         question_type: "fill_blank",
-        question_text: "_____________ mahirap ang kanilang buhay, nagsusumikap si Edmundo na makapag aral.",
+        question_text: "_____________ mahirap ang kanilang buhay, nagsusumikap si Edmundo na makapag-aral.",
         pattern_clue: "D _ _ A P _ _ ‘ T",
+        root_word: "datapwat",
         correct_answer: "DATAPWA'T",
         points: 2
       },
@@ -273,14 +283,16 @@ export const PREBUILT_QUIZZES: PrebuiltQuiz[] = [
         question_type: "fill_blank",
         question_text: "Gumising siya nang maaga at naglalako ng pandesal ________ matustusan ang kaniyang pambaon sa eskuwela.",
         pattern_clue: "_ _ A N _",
+        root_word: "upang",
         correct_answer: "UPANG",
         points: 2
       },
       {
         id: "q_2_10",
         question_type: "fill_blank",
-        question_text: "Tayo ang gumawa ng sari nating daan ________ nasa sa ating mga kamay nakasalalay ang ikatatagumpay ng ating buhay.",
+        question_text: "Tayo ang gumawa ng sarili nating daan ________ nasa sa ating mga kamay nakasalalay ang ikatatagumpay ng ating buhay.",
         pattern_clue: "S _ P _ _ _ A T",
+        root_word: "pagkat",
         correct_answer: "SAPAGKAT",
         points: 2
       }

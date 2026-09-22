@@ -1127,43 +1127,170 @@ function generateRainyTrack() {
 }
 
 // ==========================================
+// TRACK: "Mahiwagang Pagsisiyasat" (Mystery Investigation - 80 BPM)
+// ==========================================
+function generateMysteryTrack() {
+  const sampleRate = 44100;
+  const bpm = 80;
+  const secondsPerBeat = 60 / bpm;
+  const barDuration = secondsPerBeat * 4;
+  const bars = 8;
+  const duration = bars * barDuration;
+  const totalSamples = Math.floor(duration * sampleRate);
+  const bufferL = new Float32Array(totalSamples);
+  const bufferR = new Float32Array(totalSamples);
+
+  const mysteryBass = [
+    'C2', 'Eb2', 'G2', 'Ab2',
+    'B1', 'D2', 'G2', 'F2',
+    'Bb1', 'D2', 'Eb2', 'F#2',
+    'G1', 'B1', 'D2', 'F2',
+    'C2', 'G2', 'Eb2', 'D2',
+    'F1', 'C2', 'Eb2', 'Ab2',
+    'Ab1', 'C2', 'G1', 'B1',
+    'C2', 'Eb2', 'D2', 'B1'
+  ];
+
+  const mysteryMelody = [
+    { t: 0.75, note: 'G4', dur: 0.6 }, { t: 1.5, note: 'C5', dur: 0.8 }, { t: 2.25, note: 'Eb5', dur: 0.6 },
+    { t: 3.0, note: 'D5', dur: 1.0 }, { t: 4.5, note: 'B4', dur: 1.2 },
+    { t: 6.0, note: 'C5', dur: 0.8 }, { t: 7.0, note: 'Eb5', dur: 0.6 }, { t: 7.75, note: 'F#5', dur: 0.8 },
+    { t: 9.0, note: 'G5', dur: 1.5 }, { t: 11.0, note: 'F5', dur: 0.7 },
+    { t: 12.0, note: 'Eb5', dur: 0.9 }, { t: 13.0, note: 'D5', dur: 0.6 }, { t: 13.75, note: 'C5', dur: 1.0 },
+    { t: 15.0, note: 'Ab5', dur: 0.9 }, { t: 16.2, note: 'G5', dur: 0.6 }, { t: 17.0, note: 'F5', dur: 0.8 },
+    { t: 18.0, note: 'Eb5', dur: 0.8 }, { t: 19.2, note: 'D5', dur: 0.8 }, { t: 20.0, note: 'C#5', dur: 0.7 },
+    { t: 21.0, note: 'D5', dur: 0.9 }, { t: 22.2, note: 'B4', dur: 1.4 }
+  ];
+
+  function pizzicatoSample(freq, time) {
+    if (time < 0) return 0;
+    const attack = 0.006;
+    const env = time < attack ? time / attack : Math.exp(-(time - attack) * 5.0);
+    const plunk = Math.sin(2 * Math.PI * freq * 1.5 * time) * Math.exp(-time * 40) * 0.35;
+    const f1 = triangleWave(freq * time) * 0.7;
+    const f2 = Math.sin(2 * Math.PI * freq * time) * 0.3;
+    return (f1 + f2 + plunk) * env;
+  }
+
+  function clockTickSample(time, isHigh) {
+    if (time < 0 || time > 0.035) return 0;
+    const pitch = isHigh ? 1800 : 1200;
+    const env = Math.exp(-time * 160);
+    return (Math.sin(2 * Math.PI * pitch * time) * 0.7 + noiseWave() * 0.3) * env;
+  }
+
+  function darkVibeSample(freq, time) {
+    if (time < 0) return 0;
+    const env = Math.exp(-time * 2.2);
+    const tremolo = 1.0 + 0.12 * Math.sin(2 * Math.PI * 5.0 * time);
+    const fundamental = Math.sin(2 * Math.PI * freq * time);
+    const darkOvertone = Math.sin(2 * Math.PI * freq * 2.98 * time) * Math.exp(-time * 8) * 0.3;
+    return (fundamental + darkOvertone) * env * tremolo;
+  }
+
+  for (let i = 0; i < totalSamples; i++) {
+    const t = i / sampleRate;
+    const barTime = t % barDuration;
+    const beatTime = t % secondsPerBeat;
+    const beatIndex = Math.floor(t / secondsPerBeat) % (bars * 4);
+    const sixteenth = secondsPerBeat / 4;
+    const sixteenthInBar = Math.floor(barTime / sixteenth) % 16;
+    const timeSinceSixteenth = barTime % sixteenth;
+
+    const bassNote = mysteryBass[beatIndex];
+    const bassF = getNoteFreq(bassNote);
+    const bassSample = pizzicatoSample(bassF, beatTime) * 0.38;
+
+    let clockL = 0;
+    let clockR = 0;
+    const eighth = secondsPerBeat / 2;
+    const eighthIdx = Math.floor(barTime / eighth) % 8;
+    const timeSinceEighth = barTime % eighth;
+    const isHighTick = eighthIdx % 2 === 0;
+    const tickSample = clockTickSample(timeSinceEighth, isHighTick) * 0.16;
+    clockL = tickSample * (isHighTick ? 0.65 : 0.35);
+    clockR = tickSample * (isHighTick ? 0.35 : 0.65);
+
+    if (sixteenthInBar === 3 || sixteenthInBar === 11) {
+      const woodTap = clockTickSample(timeSinceSixteenth, true) * 0.08;
+      clockL += woodTap * 0.3;
+      clockR += woodTap * 0.7;
+    }
+
+    let melodySample = 0;
+    for (let m = 0; m < mysteryMelody.length; m++) {
+      const item = mysteryMelody[m];
+      const mt = t - item.t;
+      if (mt >= 0 && mt <= item.dur + 0.6) {
+        const f = getNoteFreq(item.note);
+        melodySample += darkVibeSample(f, mt) * 0.35;
+      }
+    }
+
+    const droneFreq = 65.41;
+    const droneLFO = 1.0 + 0.15 * Math.sin(2 * Math.PI * 0.25 * t);
+    const drone = Math.sin(2 * Math.PI * droneFreq * t) * 0.12 * droneLFO;
+
+    const beatInBar = Math.floor(barTime / secondsPerBeat);
+    let brushSample = 0;
+    if ((beatInBar === 1 || beatInBar === 3) && beatTime < 0.2) {
+      const bEnv = Math.exp(-beatTime * 14);
+      brushSample = noiseWave() * bEnv * 0.06;
+    }
+
+    const outL = bassSample * 0.9 + clockL + melodySample * 0.55 + drone + brushSample * 0.5;
+    const outR = bassSample * 0.9 + clockR + melodySample * 0.55 + drone + brushSample * 0.5;
+
+    bufferL[i] = Math.tanh(outL * 1.05);
+    bufferR[i] = Math.tanh(outR * 1.05);
+  }
+
+  return encodeWAV(bufferL, bufferR, sampleRate);
+}
+
+// ==========================================
 // BATCH EXECUTION: Generate Active Tracks
 // ==========================================
 console.log('--- Synthesizing Multi-Genre Background Music Library ---');
 
-console.log('1/7: Masayang Laro (Playful Chiptune - 126 BPM)...');
+console.log('1/8: Masayang Laro (Playful Chiptune - 126 BPM)...');
 const playfulWav = generatePlayfulTrack();
 fs.writeFileSync(path.join(outputDir, 'chiptune-playful.wav'), playfulWav);
 console.log(` -> chiptune-playful.wav (${(playfulWav.length / 1024 / 1024).toFixed(2)} MB)`);
 
-console.log('2/7: Bilis-Isip (Quiz Battle Chiptune - 144 BPM)...');
+console.log('2/8: Bilis-Isip (Quiz Battle Chiptune - 144 BPM)...');
 const quizWav = generateQuizTrack();
 fs.writeFileSync(path.join(outputDir, 'chiptune-quiz.wav'), quizWav);
 console.log(` -> chiptune-quiz.wav (${(quizWav.length / 1024 / 1024).toFixed(2)} MB)`);
 
-console.log('3/7: Payapang Pag-aaral (Calm Lo-Fi Study - 78 BPM)...');
+console.log('3/8: Payapang Pag-aaral (Calm Lo-Fi Study - 78 BPM)...');
 const calmWav = generateCalmTrack();
 fs.writeFileSync(path.join(outputDir, 'lofi-calm.wav'), calmWav);
 console.log(` -> lofi-calm.wav (${(calmWav.length / 1024 / 1024).toFixed(2)} MB)`);
 
-console.log('4/7: Pagninilay-nilay (Melancholic Piano & Strings - 70 BPM)...');
+console.log('4/8: Pagninilay-nilay (Melancholic Piano & Strings - 70 BPM)...');
 const melancholicWav = generateMelancholicTrack();
 fs.writeFileSync(path.join(outputDir, 'piano-melancholic.wav'), melancholicWav);
 console.log(` -> piano-melancholic.wav (${(melancholicWav.length / 1024 / 1024).toFixed(2)} MB)`);
 
-console.log('5/7: Tahimik na Gabi (Cozy Dreamy Ambient - 84 BPM)...');
+console.log('5/8: Tahimik na Gabi (Cozy Dreamy Ambient - 84 BPM)...');
 const cozyWav = generateCozyTrack();
 fs.writeFileSync(path.join(outputDir, 'ambient-cozy.wav'), cozyWav);
 console.log(` -> ambient-cozy.wav (${(cozyWav.length / 1024 / 1024).toFixed(2)} MB)`);
 
-console.log('6/7: Kapihan sa Hatinggabi (Midnight Café Jazz - 84 BPM)...');
+console.log('6/8: Kapihan sa Hatinggabi (Midnight Café Jazz - 84 BPM)...');
 const jazzWav = generateJazzTrack();
 fs.writeFileSync(path.join(outputDir, 'jazz-cafe.wav'), jazzWav);
 console.log(` -> jazz-cafe.wav (${(jazzWav.length / 1024 / 1024).toFixed(2)} MB)`);
 
-console.log('7/7: Huni ng Ulan (Rainy Afternoon Study - 72 BPM)...');
+console.log('7/8: Huni ng Ulan (Rainy Afternoon Study - 72 BPM)...');
 const rainyWav = generateRainyTrack();
 fs.writeFileSync(path.join(outputDir, 'cozy-rain.wav'), rainyWav);
 console.log(` -> cozy-rain.wav (${(rainyWav.length / 1024 / 1024).toFixed(2)} MB)`);
+
+console.log('8/8: Mahiwagang Pagsisiyasat (Mystery Investigation - 80 BPM)...');
+const mysteryWav = generateMysteryTrack();
+fs.writeFileSync(path.join(outputDir, 'mystery-detective.wav'), mysteryWav);
+console.log(` -> mystery-detective.wav (${(mysteryWav.length / 1024 / 1024).toFixed(2)} MB)`);
 
 console.log('=== Active Background Music Tracks Generated Successfully! ===');

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 
-export type TrackId = 'playful' | 'quiz' | 'calm' | 'melancholic' | 'cozy' | 'jazz' | 'rainy'
+export type TrackId = 'playful' | 'quiz' | 'calm' | 'melancholic' | 'cozy' | 'jazz' | 'rainy' | 'mystery'
 
 export interface MusicTrack {
   id: TrackId
@@ -19,18 +19,6 @@ export interface MusicTrack {
 }
 
 export const TRACKS: Record<TrackId, MusicTrack> = {
-  calm: {
-    id: 'calm',
-    nameFil: 'Payapang Pag-aaral',
-    nameEn: 'Calm Study Beats',
-    descFil: 'Kalmadong Lo-Fi jazz chords at banayad na tambol para sa konsentrasyon',
-    descEn: 'Relaxing Lo-Fi jazz chords and soft beats for deep focus',
-    genreFil: 'Lo-Fi Study',
-    genreEn: 'Lo-Fi Chill',
-    src: '/audio/lofi-calm.wav',
-    bpm: 78,
-    themeColor: 'emerald'
-  },
   jazz: {
     id: 'jazz',
     nameFil: 'Kapihan sa Hatinggabi',
@@ -43,6 +31,18 @@ export const TRACKS: Record<TrackId, MusicTrack> = {
     bpm: 84,
     themeColor: 'amber'
   },
+  mystery: {
+    id: 'mystery',
+    nameFil: 'Mahiwagang Pagsisiyasat',
+    nameEn: 'Mystery Investigation',
+    descFil: 'Pizzicato strings, ticking clock, at noir detective melody para sa pagtuklas ng misteryo',
+    descEn: 'Pizzicato strings, ticking clock rhythm, and noir detective mystery motifs',
+    genreFil: 'Misteryo / Detective',
+    genreEn: 'Mystery Noir',
+    src: '/audio/mystery-detective.wav',
+    bpm: 80,
+    themeColor: 'slate'
+  },
   rainy: {
     id: 'rainy',
     nameFil: 'Huni ng Ulan',
@@ -54,6 +54,18 @@ export const TRACKS: Record<TrackId, MusicTrack> = {
     src: '/audio/cozy-rain.wav',
     bpm: 72,
     themeColor: 'teal'
+  },
+  calm: {
+    id: 'calm',
+    nameFil: 'Payapang Pag-aaral',
+    nameEn: 'Calm Study Beats',
+    descFil: 'Kalmadong Lo-Fi jazz chords at banayad na tambol para sa konsentrasyon',
+    descEn: 'Relaxing Lo-Fi jazz chords and soft beats for deep focus',
+    genreFil: 'Lo-Fi Study',
+    genreEn: 'Lo-Fi Chill',
+    src: '/audio/lofi-calm.wav',
+    bpm: 78,
+    themeColor: 'emerald'
   },
   melancholic: {
     id: 'melancholic',
@@ -126,12 +138,12 @@ const MusicContext = createContext<MusicContextType | undefined>(undefined)
 export function MusicProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const lastRegularTrackRef = useRef<TrackId>('playful')
+  const lastRegularTrackRef = useRef<TrackId>('jazz')
 
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolumeState] = useState(0.35)
-  const [currentTrackId, setCurrentTrackId] = useState<TrackId>('playful')
+  const [currentTrackId, setCurrentTrackId] = useState<TrackId>('jazz')
   const [autoQuizMode, setAutoQuizModeState] = useState(true)
   const [hasInteracted, setHasInteracted] = useState(false)
 
@@ -176,34 +188,60 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       setAutoQuizModeState(savedAuto === 'true')
     }
 
-    // Restore chosen track or default
+    // Restore chosen track or default to Midnight Café Jazz
     const savedTrack = localStorage.getItem('gramatek_bgm_track') as TrackId
-    const validTrack: TrackId = (savedTrack && TRACKS[savedTrack]) ? savedTrack : 'playful'
-    lastRegularTrackRef.current = validTrack !== 'quiz' ? validTrack : 'playful'
+    const validTrack: TrackId = (savedTrack && TRACKS[savedTrack]) ? savedTrack : 'jazz'
+    lastRegularTrackRef.current = validTrack !== 'quiz' ? validTrack : 'jazz'
 
     const initialTrack = isQuizRoute ? 'quiz' : validTrack
     setCurrentTrackId(initialTrack)
     audio.src = TRACKS[initialTrack].src
 
-    // If user previously left music enabled, start playing on first user gesture
-    const wasEnabled = localStorage.getItem('gramatek_bgm_enabled') === 'true'
+    // Autoplay logic: Enabled by default unless explicitly disabled by user
+    const isEnabled = localStorage.getItem('gramatek_bgm_enabled') !== 'false'
+
+    const cleanupGestureListeners = () => {
+      window.removeEventListener('pointerdown', handleFirstGesture)
+      window.removeEventListener('keydown', handleFirstGesture)
+      window.removeEventListener('touchstart', handleFirstGesture)
+      window.removeEventListener('scroll', handleFirstGesture)
+    }
+
     const handleFirstGesture = () => {
       setHasInteracted(true)
-      if (wasEnabled && audioRef.current && audioRef.current.paused) {
+      if (audioRef.current && audioRef.current.paused) {
         audioRef.current.play()
           .then(() => setIsPlaying(true))
           .catch(() => {})
       }
-      window.removeEventListener('pointerdown', handleFirstGesture)
-      window.removeEventListener('keydown', handleFirstGesture)
+      cleanupGestureListeners()
     }
 
-    window.addEventListener('pointerdown', handleFirstGesture, { once: true })
-    window.addEventListener('keydown', handleFirstGesture, { once: true })
+    if (isEnabled) {
+      // 1. Try to play immediately as soon as page loads
+      const playPromise = audio.play()
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true)
+            setHasInteracted(true)
+          })
+          .catch(() => {
+            // Autoplay restricted by browser before user gesture:
+            // Register immediate unlock listeners on any first user touch/click/scroll/key
+            window.addEventListener('pointerdown', handleFirstGesture, { once: true })
+            window.addEventListener('keydown', handleFirstGesture, { once: true })
+            window.addEventListener('touchstart', handleFirstGesture, { once: true })
+            window.addEventListener('scroll', handleFirstGesture, { once: true })
+          })
+      }
+    } else {
+      // If user had explicitly muted/paused, still attach interaction listener for when they want to play
+      window.addEventListener('pointerdown', () => setHasInteracted(true), { once: true })
+    }
 
     return () => {
-      window.removeEventListener('pointerdown', handleFirstGesture)
-      window.removeEventListener('keydown', handleFirstGesture)
+      cleanupGestureListeners()
       audio.pause()
       audio.src = ''
     }
@@ -321,7 +359,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         isMuted,
         volume,
         currentTrackId,
-        currentTrack: TRACKS[currentTrackId] || TRACKS.playful,
+        currentTrack: TRACKS[currentTrackId] || TRACKS.jazz,
         autoQuizMode,
         isQuizRoute,
         hasInteracted,
