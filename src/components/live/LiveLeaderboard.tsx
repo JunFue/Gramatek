@@ -3,6 +3,7 @@
 import { useLeaderboard } from '@/lib/hooks/useLeaderboard'
 import { Trophy, Medal, Crown, Users, User, Lock } from 'lucide-react'
 import { Translate } from '@/components/Translate'
+import { LeaderboardEntry } from '@/types/live-session'
 
 interface LiveLeaderboardProps {
   sessionId: string
@@ -13,6 +14,7 @@ interface LiveLeaderboardProps {
   currentUserId?: string
   limit?: number
   compact?: boolean
+  leaderboardData?: LeaderboardEntry[]
 }
 
 export function LiveLeaderboard({
@@ -23,15 +25,20 @@ export function LiveLeaderboard({
   isHost = false,
   currentUserId,
   limit,
-  compact = false
+  compact = false,
+  leaderboardData
 }: LiveLeaderboardProps) {
-  const { leaderboard, isLeaderboardVisible, loading } = useLeaderboard(
-    sessionId,
+  const hookResult = useLeaderboard(
+    leaderboardData ? '' : sessionId,
     mode,
     revealMode,
     resultsRevealedAt,
     isHost
   )
+
+  const leaderboard = leaderboardData || hookResult.leaderboard
+  const isLeaderboardVisible = leaderboardData ? true : hookResult.isLeaderboardVisible
+  const loading = leaderboardData ? false : hookResult.loading
 
   if (!isLeaderboardVisible) {
     return (
@@ -140,13 +147,13 @@ export function LiveLeaderboard({
                     ) : mode === 'group' ? (
                       <Users className="w-4 h-4" />
                     ) : (
-                      entry.name.charAt(0).toUpperCase()
+                      (entry.name || 'M').charAt(0).toUpperCase()
                     )}
                   </div>
 
                   <div className="min-w-0">
                     <p className={`text-sm font-extrabold truncate ${isMe ? 'text-brand-primary' : 'text-slate-900'}`}>
-                      {entry.name} {isMe && '(Ikaw)'}
+                      {entry.name || 'Kalahok'} {isMe && '(Ikaw)'}
                     </p>
                     {mode === 'group' && entry.member_count !== undefined && (
                       <p className="text-[10px] text-slate-400 font-semibold">
@@ -158,7 +165,7 @@ export function LiveLeaderboard({
 
                 <div className="text-right shrink-0">
                   <span className="font-heading font-black text-base md:text-lg text-slate-900">
-                    {entry.score.toLocaleString()}
+                    {(entry.score ?? 0).toLocaleString()}
                   </span>
                   <span className="text-[10px] text-slate-400 font-extrabold ml-1">pts</span>
                 </div>

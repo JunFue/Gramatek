@@ -267,12 +267,17 @@ export function StudentLivePlayerClient({
   const handleSubmitAnswer = async (answerText: string) => {
     if (!currentQuestion) return
 
-    const res = await submitAnswerAction(initialSession.id, currentQuestion.id, answerText)
-    setMyAnswer(answerText)
-    setSubmissionResult({
-      isCorrect: res.is_correct,
-      points: res.points_awarded
-    })
+    try {
+      const res = await submitAnswerAction(initialSession.id, currentQuestion.id, answerText)
+      setMyAnswer(answerText)
+      setSubmissionResult({
+        isCorrect: res?.is_correct,
+        points: res?.points_awarded
+      })
+    } catch (err) {
+      console.error('Error submitting answer:', err)
+      setMyAnswer(answerText)
+    }
   }
 
   const currentStatus = session?.status || initialSession.status
@@ -631,6 +636,7 @@ export function StudentLivePlayerClient({
                   resultsRevealedAt={session?.results_revealed_at}
                   isHost={false}
                   currentUserId={currentUserId}
+                  leaderboardData={leaderboard}
                 />
               </div>
             </div>
@@ -672,6 +678,7 @@ export function StudentLivePlayerClient({
               resultsRevealedAt={session?.results_revealed_at}
               isHost={false}
               currentUserId={currentUserId}
+              leaderboardData={leaderboard}
             />
           </div>
 
@@ -721,6 +728,7 @@ export function StudentLivePlayerClient({
               resultsRevealedAt={session?.results_revealed_at}
               isHost={false}
               currentUserId={currentUserId}
+              leaderboardData={leaderboard}
             />
           </div>
         </div>

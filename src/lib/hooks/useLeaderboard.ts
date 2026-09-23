@@ -174,8 +174,11 @@ export function useLeaderboard(
 
     loadInitial()
 
+    if (!sessionId) return
+
     const table = mode === 'individual' ? 'live_session_participants' : 'live_session_groups'
-    const channel = supabase.channel(`leaderboard-${sessionId}-${mode}`)
+    const channelId = `leaderboard-${sessionId}-${mode}-${Math.random().toString(36).slice(2, 9)}`
+    const channel = supabase.channel(channelId)
 
     channel
       .on(
