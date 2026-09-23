@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
@@ -21,6 +21,14 @@ export function StudentSidebar({ profile }: StudentSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
   const pathname = usePathname()
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Clear hover timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+    }
+  }, [])
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -167,6 +175,19 @@ export function StudentSidebar({ profile }: StudentSidebarProps) {
           4. DESKTOP SIDEBAR (>= md)
           ═══════════════════════════════════════════════════════════ */}
       <aside 
+        onMouseEnter={() => {
+          if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current)
+            hoverTimeoutRef.current = null
+          }
+        }}
+        onMouseLeave={() => {
+          if (!isCollapsed) {
+            hoverTimeoutRef.current = setTimeout(() => {
+              setIsCollapsed(true)
+            }, 180)
+          }
+        }}
         className={`hidden md:flex bg-brand-primary border-r border-[#285840] flex-col z-30 shrink-0 shadow-xl transition-all duration-300 relative h-full ${
           isCollapsed ? 'w-20' : 'w-64'
         }`}

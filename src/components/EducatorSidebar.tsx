@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
@@ -32,6 +32,14 @@ export function EducatorSidebar({ profile, activeSession }: EducatorSidebarProps
   const [currentSession, setCurrentSession] = useState(activeSession || null)
   const pathname = usePathname()
   const supabase = createClient()
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Clear hover timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (!activeSession || activeSession.status === 'ended') {
@@ -229,6 +237,19 @@ export function EducatorSidebar({ profile, activeSession }: EducatorSidebarProps
           4. DESKTOP SIDEBAR (>= md)
           ═══════════════════════════════════════════════════════════ */}
       <aside 
+        onMouseEnter={() => {
+          if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current)
+            hoverTimeoutRef.current = null
+          }
+        }}
+        onMouseLeave={() => {
+          if (!isCollapsed) {
+            hoverTimeoutRef.current = setTimeout(() => {
+              setIsCollapsed(true)
+            }, 180)
+          }
+        }}
         className={`hidden md:flex bg-brand-primary border-r border-[#285840] flex-col z-30 shrink-0 shadow-xl transition-all duration-300 relative h-full ${
           isCollapsed ? 'w-20' : 'w-64'
         }`}

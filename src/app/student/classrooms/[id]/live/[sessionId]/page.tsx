@@ -80,7 +80,7 @@ export default async function StudentLiveSessionPage({
     .single()
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto animate-fade-in">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto animate-fade-in">
       <StudentLivePlayerClient
         classroomId={classroomId}
         classroomName={classroom.name}

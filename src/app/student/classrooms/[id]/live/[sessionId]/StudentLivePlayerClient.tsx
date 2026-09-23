@@ -562,73 +562,80 @@ export function StudentLivePlayerClient({
 
       {/* ================= LIVE QUESTION PHASE ================= */}
       {isLive && currentQuestion && (
-        <div className="space-y-6 animate-fade-in">
-          <QuestionCard
-            key={currentQuestion.id}
-            question={currentQuestion}
-            pacing={session?.pacing || 'manual'}
-            startedAt={session?.question_started_at}
-            serverOffset={serverOffset}
-            randomizeChoices={session?.randomize_choices}
-            seedKey={seedKey}
-            isRevealed={isQuestionRevealed}
-            canSubmit={canSubmit}
-            isGroupMode={isGroupMode}
-            leaderName={myGroup?.leader?.full_name || undefined}
-            myAnswer={myAnswer}
-            submittedResult={submissionResult}
-            readOnly={false}
-            isPaused={session?.is_paused}
-            onSubmit={handleSubmitAnswer}
-          />
+        <div className={`animate-fade-in ${
+          showLiveLeaderboard 
+            ? 'grid grid-cols-1 lg:grid-cols-12 gap-6 items-start' 
+            : 'space-y-6 max-w-3xl mx-auto'
+        }`}>
+          {/* Main Gameplay Column (Left) */}
+          <div className={`${showLiveLeaderboard ? 'lg:col-span-7 xl:col-span-8' : 'w-full'} space-y-6`}>
+            <QuestionCard
+              key={currentQuestion.id}
+              question={currentQuestion}
+              pacing={session?.pacing || 'manual'}
+              startedAt={session?.question_started_at}
+              serverOffset={serverOffset}
+              randomizeChoices={session?.randomize_choices}
+              seedKey={seedKey}
+              isRevealed={isQuestionRevealed}
+              canSubmit={canSubmit}
+              isGroupMode={isGroupMode}
+              leaderName={myGroup?.leader?.full_name || undefined}
+              myAnswer={myAnswer}
+              submittedResult={submissionResult}
+              readOnly={false}
+              isPaused={session?.is_paused}
+              onSubmit={handleSubmitAnswer}
+            />
 
-          {/* First correct answer highlight badge */}
-          {isQuestionRevealed && (
-            <div className="text-center animate-slide-up">
-              <FirstCorrectBadge
-                sessionId={initialSession.id}
-                questionId={currentQuestion.id}
-              />
-            </div>
-          )}
+            {/* First correct answer highlight badge */}
+            {isQuestionRevealed && (
+              <div className="text-center animate-slide-up">
+                <FirstCorrectBadge
+                  sessionId={initialSession.id}
+                  questionId={currentQuestion.id}
+                />
+              </div>
+            )}
+          </div>
 
-          {/* Automatic Live Leaderboard Display for Competitive Edge */}
+          {/* Right-Hand Side Leaderboard Standings Column */}
           {showLiveLeaderboard && (
-            <div className="space-y-4 animate-slide-up pt-2">
-              <div className="bg-linear-to-r from-amber-500 via-orange-500 to-rose-500 rounded-3xl p-5 sm:p-6 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
-                    <Trophy className="w-6 h-6 text-yellow-300" />
+            <div className="lg:col-span-5 xl:col-span-4 space-y-4 animate-slide-up lg:sticky lg:top-6">
+              <div className="bg-linear-to-r from-amber-500 via-orange-500 to-rose-500 rounded-3xl p-5 text-white shadow-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                    <Trophy className="w-5 h-5 text-yellow-300" />
                   </div>
-                  <div>
-                    <h3 className="font-heading font-black text-lg md:text-xl text-white leading-tight flex items-center gap-2">
-                      <span><Translate fil="Talaan ng Marka (Kasalukuyang Labanan)" en="Live Leaderboard Standings" /></span>
-                      <span className="px-2.5 py-0.5 bg-white/25 text-white rounded-full text-[10px] font-black uppercase tracking-wider">
+                  <div className="min-w-0">
+                    <h3 className="font-heading font-black text-base text-white leading-tight flex items-center gap-1.5 truncate">
+                      <span><Translate fil="Talaan ng Marka" en="Leaderboard" /></span>
+                      <span className="px-2 py-0.5 bg-white/25 text-white rounded-full text-[9px] font-black uppercase tracking-wider shrink-0">
                         Live
                       </span>
                     </h3>
-                    <p className="text-xs text-white/90 font-medium mt-0.5">
+                    <p className="text-[11px] text-white/90 font-medium truncate mt-0.5">
                       <Translate
-                        fil="Awtomatikong na-update ang mga puntos at ranggo pagkatapos masagot ang aytem!"
-                        en="Points and rankings update live after answering each question!"
+                        fil="Kasalukuyang Labanan"
+                        en="Live Standings"
                       />
                     </p>
                   </div>
                 </div>
 
                 {myRankInfo && (
-                  <div className="bg-white/20 backdrop-blur-md px-4 py-2.5 rounded-2xl flex items-center gap-2 shrink-0 self-start sm:self-center border border-white/20">
-                    <span className="text-xs font-bold text-white/85">
-                      <Translate fil="Iyong Ranggo:" en="Your Rank:" />
+                  <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-2xl flex items-center gap-1.5 shrink-0 border border-white/20">
+                    <span className="text-[10px] font-bold text-white/85">
+                      <Translate fil="Ranggo:" en="Rank:" />
                     </span>
-                    <span className="text-xl font-black text-yellow-300">
+                    <span className="text-base font-black text-yellow-300">
                       #{myRankInfo.rank}
                     </span>
                   </div>
                 )}
               </div>
 
-              <div className="text-left max-w-2xl mx-auto">
+              <div className="text-left w-full">
                 <LiveLeaderboard
                   sessionId={initialSession.id}
                   mode={session?.mode}
