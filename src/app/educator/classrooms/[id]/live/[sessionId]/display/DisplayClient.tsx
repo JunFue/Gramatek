@@ -10,7 +10,8 @@ import { LiveLeaderboard } from '@/components/live/LiveLeaderboard'
 import { FirstCorrectBadge } from '@/components/live/FirstCorrectBadge'
 import { CountdownTimer } from '@/components/live/CountdownTimer'
 import { normalizeChoices } from '@/lib/utils/randomize'
-import { Trophy, Users, Clock, Sparkles, CheckCircle2 } from 'lucide-react'
+import { resolveQuestionType, extractChoicesList, getQuestionTypeMeta } from '@/lib/utils/live-questions'
+import { Trophy, Users, Clock, Sparkles, CheckCircle2, ListOrdered, Type } from 'lucide-react'
 import { Translate } from '@/components/Translate'
 import { createClient } from '@/lib/supabase/client'
 
@@ -88,7 +89,10 @@ export function DisplayClient({
     }
   }, [currentQuestion, session, supabase])
 
+  const qType = currentQuestion ? resolveQuestionType(currentQuestion) : 'multiple_choice'
+  const typeMeta = getQuestionTypeMeta(qType)
   const choices = currentQuestion ? normalizeChoices(currentQuestion.choices) : []
+  const rawOptionsList = currentQuestion ? extractChoicesList(currentQuestion.choices) : []
 
   return (
     <div className="max-w-7xl mx-auto w-full flex flex-col justify-between flex-1 space-y-8">
@@ -215,9 +219,14 @@ export function DisplayClient({
             <div className="bg-slate-800/90 border border-slate-700 rounded-3xl p-8 shadow-2xl space-y-8 backdrop-blur-md">
               {/* Question Header & Submissions counter */}
               <div className="flex flex-wrap items-center justify-between gap-4">
-                <span className="px-4 py-1.5 bg-emerald-500 text-slate-950 font-black text-sm rounded-full">
-                  Tanong {(session?.question_index || 0) + 1} / {questions.length}
-                </span>
+                <div className="flex items-center gap-2.5">
+                  <span className="px-4 py-1.5 bg-emerald-500 text-slate-950 font-black text-sm rounded-full">
+                    Tanong {(session?.question_index || 0) + 1} / {questions.length}
+                  </span>
+                  <span className="px-3.5 py-1 bg-slate-800 border border-slate-600 text-slate-200 text-xs font-black rounded-full">
+                    <Translate fil={typeMeta.labelFil} en={typeMeta.labelEn} />
+                  </span>
+                </div>
 
                 <div className="flex items-center gap-3">
                   <span className="px-4 py-1.5 bg-slate-900 border border-slate-700 text-slate-300 rounded-full text-xs font-black">
@@ -243,34 +252,191 @@ export function DisplayClient({
                 {currentQuestion?.prompt}
               </h2>
 
-              {/* Choices Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {choices.map((choice, idx) => {
-                  const letter = String.fromCharCode(65 + idx)
-                  const isCorrect = currentQuestion?.revealed_at &&
-                    choice.text.trim().toLowerCase() === currentQuestion.correct_answer.trim().toLowerCase()
+              {/* 1. Word Scramble Display View */}
+              {qType === 'word_scramble' && (
+                <div className="space-y-6">
+                  <div className="text-center space-y-3">
+                    <span className="text-xs font-extrabold text-amber-400 uppercase tracking-widest block">
+                      ★ AYUSIN ANG MGA NAGULONG TITIK ★
+                    </span>
+                    <div className="flex flex-wrap gap-3 justify-center p-6 bg-slate-900/90 border-2 border-dashed border-amber-500/40 rounded-3xl shadow-inner">
+                      {rawOptionsList.map((char: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-amber-500/20 border-2 border-amber-400/80 text-amber-300 font-mono font-black text-2xl md:text-3xl flex items-center justify-center shadow-lg transform transition-transform hover:scale-105"
+                        >
+                          {char}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
 
-                  return (
-                    <div
-                      key={choice.id}
-                      className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
-                        isCorrect
-                          ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-100 shadow-xl'
-                          : 'bg-slate-900/80 border-slate-700 text-slate-200'
-                      }`}
-                    >
-                      <span
-                        className={`w-9 h-9 rounded-xl font-black text-base flex items-center justify-center shrink-0 ${
-                          isCorrect ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'
+                  {currentQuestion?.revealed_at && (
+                    <div className="p-6 bg-emerald-500/20 border-2 border-emerald-400 rounded-3xl text-center space-y-2 animate-scale-up">
+                      <span className="text-xs font-black text-emerald-400 uppercase tracking-wider block">
+                        Tamang Salita (Answer):
+                      </span>
+                      <p className="text-3xl md:text-4xl font-heading font-black text-white font-mono tracking-widest">
+                        {currentQuestion.correct_answer}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 2. Enumeration Display View */}
+              {qType === 'enumeration' && (
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <span className="text-xs font-extrabold text-emerald-400 uppercase tracking-widest block">
+                      ★ LISTAHAN NG MGA SAGOT ★
+                    </span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {rawOptionsList.map((item: string, idx: number) => (
+                        <div
+                          key={idx}
+                          className="p-5 rounded-2xl border border-slate-700 bg-slate-900/80 flex items-center gap-4 text-slate-200"
+                        >
+                          <span className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500 text-emerald-400 font-black text-base flex items-center justify-center shrink-0">
+                            {idx + 1}
+                          </span>
+                          <span className="text-xl font-bold font-mono">
+                            {currentQuestion?.revealed_at ? item : '__________________'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {currentQuestion?.revealed_at && (
+                    <div className="p-6 bg-emerald-500/20 border-2 border-emerald-400 rounded-3xl text-center space-y-2 animate-scale-up">
+                      <span className="text-xs font-black text-emerald-400 uppercase tracking-wider block">
+                        Mga Tinatanggap na Sagot:
+                      </span>
+                      <p className="text-2xl md:text-3xl font-heading font-black text-white">
+                        {currentQuestion.correct_answer}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 3. Sentence Scramble Display View */}
+              {qType === 'sentence_scramble' && (
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <span className="text-xs font-extrabold text-purple-400 uppercase tracking-widest block">
+                      ★ AYUSIN ANG MGA SALITA SA WASTONG PANGUNGUSAP ★
+                    </span>
+                    <div className="flex flex-wrap gap-3 justify-center p-6 bg-slate-900/90 border-2 border-dashed border-purple-500/40 rounded-3xl">
+                      {rawOptionsList.map((word: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className="px-5 py-2.5 rounded-xl bg-purple-500/20 border border-purple-400/60 text-purple-200 font-bold text-lg shadow-md"
+                        >
+                          {word}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {currentQuestion?.revealed_at && (
+                    <div className="p-6 bg-emerald-500/20 border-2 border-emerald-400 rounded-3xl text-center space-y-2 animate-scale-up">
+                      <span className="text-xs font-black text-emerald-400 uppercase tracking-wider block">
+                        Wastong Pangungusap:
+                      </span>
+                      <p className="text-2xl md:text-3xl font-heading font-black text-white">
+                        {currentQuestion.correct_answer}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 4. True or False Display View */}
+              {qType === 'true_false' && (
+                <div className="grid grid-cols-2 gap-6">
+                  {['TAMA', 'MALI'].map((option) => {
+                    const isCorrect = currentQuestion?.revealed_at &&
+                      currentQuestion.correct_answer.trim().toUpperCase() === option
+
+                    return (
+                      <div
+                        key={option}
+                        className={`p-8 rounded-3xl border-2 text-center flex flex-col items-center justify-center gap-3 transition-all ${
+                          isCorrect
+                            ? 'bg-emerald-500/30 border-emerald-400 text-white shadow-2xl scale-[1.02]'
+                            : currentQuestion?.revealed_at
+                            ? 'bg-slate-900/60 border-slate-800 text-slate-500 opacity-40'
+                            : option === 'TAMA'
+                            ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/40 text-rose-300'
                         }`}
                       >
-                        {letter}
+                        <span className="text-4xl font-black">
+                          {option === 'TAMA' ? '✓' : '✗'}
+                        </span>
+                        <span className="text-2xl font-black">
+                          {option === 'TAMA' ? 'TAMA (True)' : 'MALI (False)'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* 5. Multiple Choice Display View */}
+              {qType === 'multiple_choice' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {choices.map((choice, idx) => {
+                    const letter = String.fromCharCode(65 + idx)
+                    const isCorrect = currentQuestion?.revealed_at &&
+                      choice.text.trim().toLowerCase() === currentQuestion.correct_answer.trim().toLowerCase()
+
+                    return (
+                      <div
+                        key={choice.id}
+                        className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
+                          isCorrect
+                            ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-100 shadow-xl'
+                            : 'bg-slate-900/80 border-slate-700 text-slate-200'
+                        }`}
+                      >
+                        <span
+                          className={`w-9 h-9 rounded-xl font-black text-base flex items-center justify-center shrink-0 ${
+                            isCorrect ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'
+                          }`}
+                        >
+                          {letter}
+                        </span>
+                        <span className="text-xl font-bold leading-snug pt-0.5">{choice.text}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* 6. Fill in the Blank Display View */}
+              {qType === 'fill_blank' && (
+                <div className="space-y-6">
+                  {currentQuestion?.revealed_at ? (
+                    <div className="p-6 bg-emerald-500/20 border-2 border-emerald-400 rounded-3xl text-center space-y-2 animate-scale-up">
+                      <span className="text-xs font-black text-emerald-400 uppercase tracking-wider block">
+                        Tamang Sagot (Correct Answer):
                       </span>
-                      <span className="text-xl font-bold leading-snug pt-0.5">{choice.text}</span>
+                      <p className="text-3xl md:text-4xl font-heading font-black text-white">
+                        {currentQuestion.correct_answer}
+                      </p>
                     </div>
-                  )
-                })}
-              </div>
+                  ) : (
+                    <div className="p-8 bg-slate-900/80 border border-slate-700 rounded-3xl text-center">
+                      <span className="text-slate-400 font-mono text-2xl font-bold tracking-widest">
+                        [ ___________________________ ]
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* First Correct Answer Recognition */}
               {currentQuestion && (

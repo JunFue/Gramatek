@@ -32,13 +32,22 @@ export interface LiveSession {
   created_at: string
 }
 
+export type LiveQuestionType =
+  | 'multiple_choice'
+  | 'fill_blank'
+  | 'enumeration'
+  | 'word_scramble'
+  | 'true_false'
+  | 'sentence_scramble'
+
 export interface LiveSessionQuestion {
   id: string
   session_id: string
   source_question_id: string | null
   order_index: number
   prompt: string
-  choices: LiveSessionQuestionChoice[] | string[]
+  question_type?: LiveQuestionType
+  choices: LiveSessionQuestionChoice[] | string[] | any
   correct_answer: string
   time_limit_seconds: number | null
   revealed_at: string | null

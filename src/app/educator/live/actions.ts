@@ -6,8 +6,9 @@ import { revalidatePath } from 'next/cache'
 export interface LiveQuestionInput {
   id?: string
   prompt: string
+  question_type?: string
   choices: unknown
-  correct_answer: string | number
+  correct_answer: any
   time_limit_seconds?: number | null
 }
 
@@ -93,8 +94,10 @@ export async function createLiveSessionAction(formData: {
     }
 
     const rows = questionsList.map((q, idx) => {
+      const qType = q.question_type || 'multiple_choice'
       let normalizedCorrectAnswer = String(q.correct_answer ?? '')
-      if (Array.isArray(q.choices) && typeof q.correct_answer === 'number') {
+
+      if (qType === 'multiple_choice' && Array.isArray(q.choices) && typeof q.correct_answer === 'number') {
         const choiceAtIdx = q.choices[q.correct_answer]
         if (typeof choiceAtIdx === 'string') {
           normalizedCorrectAnswer = choiceAtIdx
@@ -102,28 +105,48 @@ export async function createLiveSessionAction(formData: {
           const cObj = choiceAtIdx as Record<string, unknown>
           normalizedCorrectAnswer = String(cObj.text || cObj.label || cObj.option || q.correct_answer)
         }
+      } else if (qType === 'enumeration' && Array.isArray(q.correct_answer)) {
+        normalizedCorrectAnswer = q.correct_answer.map(String).filter(Boolean).join(', ')
       }
 
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(q.id || '')
+      const rawChoices = Array.isArray(q.choices) ? q.choices : []
 
       return {
         session_id: sessionId,
         source_question_id: isUuid ? q.id : null,
         order_index: idx,
         prompt: q.prompt,
-        choices: Array.isArray(q.choices) ? q.choices : [],
+        // Embed question_type and options directly in choices JSONB for bulletproof backward-compatibility
+        choices: {
+          question_type: qType,
+          options: rawChoices
+        },
         correct_answer: normalizedCorrectAnswer,
         time_limit_seconds: q.time_limit_seconds || formData.default_time_limit_seconds || 30
       }
     })
 
-    const { error: qErr } = await supabase
-      .from('live_session_questions')
-      .insert(rows)
+    // Try inserting with question_type column if table has been migrated
+    const rowsWithCol = rows.map((r, i) => ({
+      ...r,
+      question_type: questionsList[i].question_type || 'multiple_choice'
+    }))
 
-    if (qErr) {
-      console.error('Failed to insert live session questions:', qErr)
-      throw new Error(qErr?.message || 'Failed to add questions')
+    const { error: qErrWithCol } = await supabase
+      .from('live_session_questions')
+      .insert(rowsWithCol)
+
+    if (qErrWithCol) {
+      // Column may not exist yet in database, fallback to JSONB embedded choices
+      const { error: qErrFallback } = await supabase
+        .from('live_session_questions')
+        .insert(rows)
+
+      if (qErrFallback) {
+        console.error('Failed to insert live session questions:', qErrFallback)
+        throw new Error(qErrFallback?.message || 'Failed to add questions')
+      }
     }
   } else if (formData.question_ids && formData.question_ids.length > 0) {
     const { error: qErr } = await supabase.rpc('add_questions_to_session', {

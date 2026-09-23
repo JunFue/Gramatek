@@ -32,6 +32,7 @@ import {
   resumeLiveSessionAction
 } from '@/app/educator/live/actions'
 import { createClient } from '@/lib/supabase/client'
+import { resolveQuestionType, extractChoicesList, getQuestionTypeMeta } from '@/lib/utils/live-questions'
 
 interface HostControlPanelClientProps {
   classroomId: string
@@ -718,55 +719,104 @@ export function HostControlPanelClient({
             </div>
 
             {/* Current Question Display Card */}
-            {currentQuestion ? (
-              <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-md space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-slate-400 uppercase tracking-wider">Aktibong Tanong</span>
-                    {currentQuestion.revealed_at && (
-                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-black">
-                        Nailahad Na
+            {currentQuestion ? (() => {
+              const qType = resolveQuestionType(currentQuestion)
+              const typeMeta = getQuestionTypeMeta(qType)
+              const rawOptions = extractChoicesList(currentQuestion.choices)
+
+              return (
+                <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-md space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-slate-400 uppercase tracking-wider">Aktibong Tanong</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${typeMeta.badgeClass}`}>
+                        <Translate fil={typeMeta.labelFil} en={typeMeta.labelEn} />
                       </span>
+                      {currentQuestion.revealed_at && (
+                        <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-black">
+                          Nailahad Na
+                        </span>
+                      )}
+                    </div>
+
+                    {session?.pacing === 'timed' && session.question_started_at && (
+                      <div className="w-48">
+                        <CountdownTimer
+                          startedAt={session.question_started_at}
+                          durationSeconds={currentQuestion.time_limit_seconds || session.default_time_limit_seconds || 30}
+                          serverOffset={serverOffset}
+                          isPaused={session?.is_paused}
+                          variant="bar"
+                        />
+                      </div>
                     )}
                   </div>
 
-                  {session?.pacing === 'timed' && session.question_started_at && (
-                    <div className="w-48">
-                      <CountdownTimer
-                        startedAt={session.question_started_at}
-                        durationSeconds={currentQuestion.time_limit_seconds || session.default_time_limit_seconds || 30}
-                        serverOffset={serverOffset}
-                        isPaused={session?.is_paused}
-                        variant="bar"
-                      />
+                  <h2 className="text-2xl md:text-3xl font-heading font-black text-slate-900 leading-snug">
+                    {currentQuestion.prompt}
+                  </h2>
+
+                  {/* Type-Specific Host Details Preview */}
+                  {qType === 'word_scramble' && rawOptions.length > 0 && (
+                    <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-bold text-amber-900">Mga Nagulong Titik:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {rawOptions.map((char: string, idx: number) => (
+                          <span key={idx} className="w-8 h-8 rounded-lg bg-white border border-amber-300 font-mono font-black text-sm flex items-center justify-center text-slate-900 shadow-xs">
+                            {char}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
-                </div>
 
-                <h2 className="text-2xl md:text-3xl font-heading font-black text-slate-900 leading-snug">
-                  {currentQuestion.prompt}
-                </h2>
+                  {qType === 'sentence_scramble' && rawOptions.length > 0 && (
+                    <div className="p-3 bg-purple-50 rounded-2xl border border-purple-200 flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-bold text-purple-900">Mga Nagulong Salita:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {rawOptions.map((word: string, idx: number) => (
+                          <span key={idx} className="px-2.5 py-1 rounded-md bg-white border border-purple-300 font-bold text-xs text-purple-950 shadow-xs">
+                            {word}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                {/* First Correct Badge if available */}
-                <FirstCorrectBadge
-                  sessionId={initialSession.id}
-                  questionId={currentQuestion.id}
-                />
+                  {qType === 'enumeration' && rawOptions.length > 0 && (
+                    <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 space-y-1">
+                      <span className="text-xs font-bold text-emerald-900 block">Listahan ng Aytem:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {rawOptions.map((item: string, idx: number) => (
+                          <span key={idx} className="px-3 py-1 rounded-lg bg-white border border-emerald-300 font-bold text-xs text-emerald-950 shadow-xs">
+                            {idx + 1}. {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                {/* Correct Answer Highlight for Host */}
-                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                  <div>
-                    <span className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block">
-                      Tamang Sagot (Host View):
-                    </span>
-                    <span className="text-base font-black text-emerald-950">
-                      {currentQuestion.correct_answer}
-                    </span>
+                  {/* First Correct Badge if available */}
+                  <FirstCorrectBadge
+                    sessionId={initialSession.id}
+                    questionId={currentQuestion.id}
+                  />
+
+                  {/* Correct Answer Highlight for Host */}
+                  <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <div>
+                      <span className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block">
+                        Tamang Sagot (Host View):
+                      </span>
+                      <span className="text-base font-black text-emerald-950">
+                        {currentQuestion.correct_answer}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
+              )
+            })() : (
               <div className="p-12 bg-white rounded-3xl border border-slate-200 text-center font-bold text-slate-400">
                 <Translate fil="Walang aktibong tanong." en="No active question." />
               </div>

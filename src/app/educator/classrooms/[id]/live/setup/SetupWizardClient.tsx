@@ -203,6 +203,7 @@ export function SetupWizardClient({
         const questionsPayload = selectedCards.map((c) => ({
           id: c.id,
           prompt: c.question_text,
+          question_type: c.question_type,
           choices: c.options || [],
           correct_answer: c.correct_answer,
           time_limit_seconds: cardTimeOverrides[c.id] || c.time_limit || defaultTimeLimit
@@ -582,8 +583,13 @@ export function SetupWizardClient({
                           />
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-bold truncate">{card.question_text}</p>
-                            <p className="text-[10px] text-slate-500 mt-0.5 font-medium">
-                              {card.question_type === 'multiple_choice' ? 'Multiple Choice' : 'Punan ang Patlang'}
+                            <p className="text-[10px] text-slate-500 mt-0.5 font-bold uppercase">
+                              {card.question_type === 'multiple_choice' && 'Multiple Choice'}
+                              {card.question_type === 'fill_blank' && 'Punan ang Patlang'}
+                              {card.question_type === 'enumeration' && 'Enumerasyon'}
+                              {card.question_type === 'word_scramble' && 'Word Scramble'}
+                              {card.question_type === 'true_false' && 'Tama o Mali'}
+                              {card.question_type === 'sentence_scramble' && 'Ayusin ang Pangungusap'}
                             </p>
                           </div>
                         </div>
@@ -716,6 +722,39 @@ export function SetupWizardClient({
                         {card.question_type === 'fill_blank' && (
                           <p className="text-[11px] font-bold text-emerald-800 bg-emerald-50/70 px-2.5 py-1 rounded-lg inline-block border border-emerald-200">
                             Tamang Sagot: {card.correct_answer}
+                          </p>
+                        )}
+
+                        {card.question_type === 'word_scramble' && (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                            <span className="text-[10px] font-bold text-amber-900">Mga Titik:</span>
+                            {(card.options || []).map((char, cIdx) => (
+                              <span key={cIdx} className="w-5 h-5 rounded bg-amber-100 text-amber-950 font-black font-mono text-[10px] flex items-center justify-center border border-amber-300">
+                                {char}
+                              </span>
+                            ))}
+                            <span className="text-[10px] text-emerald-800 font-bold ml-1">➔ {card.correct_answer}</span>
+                          </div>
+                        )}
+
+                        {card.question_type === 'enumeration' && (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                            <span className="text-[10px] font-bold text-emerald-900">Listahan:</span>
+                            <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              {Array.isArray(card.correct_answer) ? card.correct_answer.join(', ') : (card.options || []).join(', ') || card.correct_answer}
+                            </span>
+                          </div>
+                        )}
+
+                        {card.question_type === 'true_false' && (
+                          <p className="text-[11px] font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 inline-block">
+                            Tamang Sagot: {card.correct_answer}
+                          </p>
+                        )}
+
+                        {card.question_type === 'sentence_scramble' && (
+                          <p className="text-[11px] font-bold text-purple-800 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 inline-block">
+                            Buong Pangungusap: {card.correct_answer}
                           </p>
                         )}
                       </div>

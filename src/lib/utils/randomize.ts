@@ -30,6 +30,13 @@ function stringToSeed(str: string): number {
  */
 export function normalizeChoices(choices: unknown): LiveSessionQuestionChoice[] {
   if (!choices) return []
+
+  if (typeof choices === 'object' && choices !== null && !Array.isArray(choices)) {
+    const obj = choices as Record<string, unknown>
+    if (Array.isArray(obj.options)) return normalizeChoices(obj.options)
+    if (Array.isArray(obj.choices)) return normalizeChoices(obj.choices)
+    if (Array.isArray(obj.items)) return normalizeChoices(obj.items)
+  }
   
   if (Array.isArray(choices)) {
     return choices.map((c: unknown, index: number) => {
