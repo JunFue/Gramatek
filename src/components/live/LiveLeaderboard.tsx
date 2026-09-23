@@ -1,7 +1,8 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
 import { useLeaderboard } from '@/lib/hooks/useLeaderboard'
-import { Trophy, Medal, Crown, Users, User, Lock } from 'lucide-react'
+import { Trophy, Medal, Crown, Users, User, Lock, ArrowUp, ArrowDown } from 'lucide-react'
 import { Translate } from '@/components/Translate'
 import { LeaderboardEntry } from '@/types/live-session'
 
@@ -39,6 +40,57 @@ export function LiveLeaderboard({
   const leaderboard = leaderboardData || hookResult.leaderboard
   const isLeaderboardVisible = leaderboardData ? true : hookResult.isLeaderboardVisible
   const loading = leaderboardData ? false : hookResult.loading
+
+  // Real-time rank change & score gain tracking
+  const prevRanksRef = useRef<Map<string, number>>(new Map())
+  const prevScoresRef = useRef<Map<string, number>>(new Map())
+  const [rankDeltas, setRankDeltas] = useState<Map<string, number>>(new Map())
+  const [scoreGains, setScoreGains] = useState<Map<string, number>>(new Map())
+  const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!leaderboard || leaderboard.length === 0) return
+
+    const newDeltas = new Map<string, number>()
+    const newGains = new Map<string, number>()
+    const updated = new Set<string>()
+
+    leaderboard.forEach((entry, idx) => {
+      const currentRank = idx + 1
+      const prevRank = prevRanksRef.current.get(entry.id)
+      const prevScore = prevScoresRef.current.get(entry.id)
+
+      if (prevRank !== undefined) {
+        const rankDiff = prevRank - currentRank // positive = climbed up, negative = dropped
+        if (rankDiff !== 0) {
+          newDeltas.set(entry.id, rankDiff)
+          updated.add(entry.id)
+        }
+      }
+
+      if (prevScore !== undefined && entry.score > prevScore) {
+        newGains.set(entry.id, entry.score - prevScore)
+        updated.add(entry.id)
+      }
+
+      prevRanksRef.current.set(entry.id, currentRank)
+      prevScoresRef.current.set(entry.id, entry.score)
+    })
+
+    if (updated.size > 0) {
+      setRankDeltas(newDeltas)
+      setScoreGains(newGains)
+      setRecentlyUpdatedIds(updated)
+
+      const timer = setTimeout(() => {
+        setRecentlyUpdatedIds(new Set())
+        setRankDeltas(new Map())
+        setScoreGains(new Map())
+      }, 4000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [leaderboard])
 
   if (!isLeaderboardVisible) {
     return (
@@ -82,9 +134,15 @@ export function LiveLeaderboard({
           </div>
         </div>
 
-        <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-black">
-          {leaderboard.length} {mode === 'group' ? 'pangkat' : 'kalahok'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 text-[11px] font-extrabold text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-full shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <Translate fil="Realtime" en="Realtime" />
+          </span>
+          <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-black">
+            {leaderboard.length} {mode === 'group' ? 'pangkat' : 'kalahok'}
+          </span>
+        </div>
       </div>
 
       {loading && leaderboard.length === 0 ? (
@@ -100,6 +158,9 @@ export function LiveLeaderboard({
           {displayedList.map((entry, index) => {
             const isMe = currentUserId && entry.id === currentUserId
             const rank = index + 1
+            const delta = rankDeltas.get(entry.id)
+            const scoreGain = scoreGains.get(entry.id)
+            const isRecentlyUpdated = recentlyUpdatedIds.has(entry.id)
 
             let rankBadge = null
             if (rank === 1) {
@@ -131,16 +192,35 @@ export function LiveLeaderboard({
             return (
               <div
                 key={entry.id}
-                className={`flex items-center justify-between p-3 rounded-2xl transition-all ${
-                  isMe
-                    ? 'bg-brand-primary/10 border-2 border-brand-primary'
+                className={`flex items-center justify-between p-3 rounded-2xl transition-all duration-300 ${
+                  isRecentlyUpdated && delta && delta > 0
+                    ? 'ring-2 ring-emerald-500 bg-emerald-50/80 shadow-md scale-[1.01]'
+                    : isRecentlyUpdated && delta && delta < 0
+                    ? 'ring-1 ring-rose-400 bg-rose-50/50'
+                    : isMe
+                    ? 'bg-brand-primary/10 border-2 border-brand-primary shadow-xs'
                     : rank === 1
                     ? 'bg-yellow-50/70 border border-yellow-200'
                     : 'bg-slate-50/70 border border-slate-200/70 hover:bg-slate-100/70'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  {rankBadge}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {rankBadge}
+                    {delta !== undefined && delta > 0 && (
+                      <span className="inline-flex items-center text-[10px] font-black text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full animate-bounce shadow-2xs">
+                        <ArrowUp className="w-2.5 h-2.5 stroke-[3]" />
+                        +{delta}
+                      </span>
+                    )}
+                    {delta !== undefined && delta < 0 && (
+                      <span className="inline-flex items-center text-[10px] font-black text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded-full shadow-2xs">
+                        <ArrowDown className="w-2.5 h-2.5 stroke-[3]" />
+                        {Math.abs(delta)}
+                      </span>
+                    )}
+                  </div>
+
                   <div className="w-8 h-8 rounded-xl bg-brand-light flex items-center justify-center overflow-hidden shrink-0 border border-brand-primary/20 text-brand-primary font-bold text-xs">
                     {entry.avatar_url ? (
                       <img src={entry.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -164,6 +244,11 @@ export function LiveLeaderboard({
                 </div>
 
                 <div className="text-right shrink-0">
+                  {scoreGain !== undefined && scoreGain > 0 && (
+                    <div className="text-[11px] font-black text-emerald-600 animate-pulse leading-none mb-0.5">
+                      +{scoreGain} pts
+                    </div>
+                  )}
                   <span className="font-heading font-black text-base md:text-lg text-slate-900">
                     {(entry.score ?? 0).toLocaleString()}
                   </span>

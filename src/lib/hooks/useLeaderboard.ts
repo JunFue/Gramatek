@@ -176,7 +176,6 @@ export function useLeaderboard(
 
     if (!sessionId) return
 
-    const table = mode === 'individual' ? 'live_session_participants' : 'live_session_groups'
     const channelId = `leaderboard-${sessionId}-${mode}-${Math.random().toString(36).slice(2, 9)}`
     const channel = supabase.channel(channelId)
 
@@ -186,7 +185,19 @@ export function useLeaderboard(
         {
           event: '*',
           schema: 'public',
-          table: table,
+          table: 'live_session_participants',
+          filter: `session_id=eq.${sessionId}`
+        },
+        () => {
+          fetchScores()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'live_session_groups',
           filter: `session_id=eq.${sessionId}`
         },
         () => {

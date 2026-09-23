@@ -285,13 +285,14 @@ export function StudentLivePlayerClient({
   const isLive = currentStatus === 'question' || currentStatus === 'reveal'
   const isEnded = currentStatus === 'ended'
 
+  const isScoresHidden = session?.reveal_mode === 'end_of_session' && !session?.results_revealed_at
+  const showLiveLeaderboard = !isScoresHidden
+
   const isQuestionRevealed = !!(
     currentQuestion?.revealed_at ||
     session?.results_revealed_at ||
     (session?.reveal_mode === 'auto_per_question' && (currentStatus === 'reveal' || !!myAnswer))
   )
-
-  const showLiveLeaderboard = (isQuestionRevealed || (session?.reveal_mode === 'auto_per_question' && !!myAnswer)) && session?.reveal_mode !== 'end_of_session'
 
   // Trigger celebration only when answer is officially revealed and is correct
   useEffect(() => {
@@ -432,8 +433,6 @@ export function StudentLivePlayerClient({
   const canSubmit = !isGroupMode || (myGroup ? (!myGroup.leader_id || myGroup.leader_id === currentUserId) : true)
 
   const seedKey = isGroupMode && myParticipant?.group_id ? myParticipant.group_id : currentUserId
-
-  const isScoresHidden = session?.reveal_mode === 'end_of_session' && !session?.results_revealed_at
 
   return (
     <div className="space-y-6">
