@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { 
   Users, User, Trophy, ShieldAlert, AlertCircle, Clock, 
-  Crown, CheckCircle2, ArrowLeft, Loader2, Sparkles, LogOut, Pause
+  Crown, CheckCircle2, ArrowLeft, Loader2, Sparkles, LogOut, Pause, X
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { Translate } from '@/components/Translate'
 import { LiveSession, LiveSessionGroup, LiveSessionParticipant } from '@/types/live-session'
 import { useLiveSession } from '@/lib/hooks/useLiveSession'
+import { useLeaderboard } from '@/lib/hooks/useLeaderboard'
 import { useServerTimeOffset } from '@/lib/hooks/useServerTimeOffset'
 import { QuestionCard } from '@/components/live/QuestionCard'
 import { GroupRoster } from '@/components/live/GroupRoster'
@@ -63,6 +64,31 @@ export function StudentLivePlayerClient({
     isCorrect?: boolean
     points?: number
   } | null>(null)
+
+  // Live Leaderboard & Ranking State
+  const [isLeaderboardModalOpen, setIsLeaderboardModalOpen] = useState<boolean>(false)
+
+  const { leaderboard } = useLeaderboard(
+    initialSession.id,
+    session?.mode || initialSession.mode,
+    session?.reveal_mode || initialSession.reveal_mode,
+    session?.results_revealed_at,
+    false
+  )
+
+  const isGroupMode = (session?.mode || initialSession.mode) === 'group'
+
+  const myRankInfo = useMemo(() => {
+    if (!leaderboard || leaderboard.length === 0) return null
+    const targetId = isGroupMode && myParticipant?.group_id ? myParticipant.group_id : currentUserId
+    const index = leaderboard.findIndex((e) => e.id === targetId)
+    if (index === -1) return null
+    return {
+      rank: index + 1,
+      entry: leaderboard[index],
+      totalParticipants: leaderboard.length
+    }
+  }, [leaderboard, isGroupMode, myParticipant?.group_id, currentUserId])
 
   // 1. Join live session RPC on mount
   useEffect(() => {
@@ -257,8 +283,10 @@ export function StudentLivePlayerClient({
   const isQuestionRevealed = !!(
     currentQuestion?.revealed_at ||
     session?.results_revealed_at ||
-    (session?.reveal_mode === 'auto_per_question' && currentStatus === 'reveal')
+    (session?.reveal_mode === 'auto_per_question' && (currentStatus === 'reveal' || !!myAnswer))
   )
+
+  const showLiveLeaderboard = (isQuestionRevealed || (session?.reveal_mode === 'auto_per_question' && !!myAnswer)) && session?.reveal_mode !== 'end_of_session'
 
   // Trigger celebration only when answer is officially revealed and is correct
   useEffect(() => {
@@ -395,7 +423,6 @@ export function StudentLivePlayerClient({
   }
 
   // Role permissions
-  const isGroupMode = session?.mode === 'group'
   const isLeader = !isGroupMode || Boolean(myGroup && myGroup.leader_id === currentUserId)
   const canSubmit = !isGroupMode || (myGroup ? (!myGroup.leader_id || myGroup.leader_id === currentUserId) : true)
 
@@ -432,6 +459,19 @@ export function StudentLivePlayerClient({
               Lider
             </span>
           )}
+
+          {!isScoresHidden && myRankInfo && (
+            <button
+              type="button"
+              onClick={() => setIsLeaderboardModalOpen(true)}
+              className="px-3.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 font-heading font-black text-xs md:text-sm rounded-full flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+              title="Tingnan ang Talaan ng Marka"
+            >
+              <Trophy className="w-3.5 h-3.5 text-amber-700" />
+              <span>Ranggo #{myRankInfo.rank}</span>
+            </button>
+          )}
+
           {isScoresHidden ? (
             <span className="px-3.5 py-1.5 bg-slate-100 text-slate-600 font-heading font-black text-xs md:text-sm rounded-full flex items-center gap-1">
               🔒 <Translate fil="Puntos Nakatago" en="Scores Hidden" />
@@ -546,6 +586,55 @@ export function StudentLivePlayerClient({
               />
             </div>
           )}
+
+          {/* Automatic Live Leaderboard Display for Competitive Edge */}
+          {showLiveLeaderboard && (
+            <div className="space-y-4 animate-slide-up pt-2">
+              <div className="bg-linear-to-r from-amber-500 via-orange-500 to-rose-500 rounded-3xl p-5 sm:p-6 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                    <Trophy className="w-6 h-6 text-yellow-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-heading font-black text-lg md:text-xl text-white leading-tight flex items-center gap-2">
+                      <span><Translate fil="Talaan ng Marka (Kasalukuyang Labanan)" en="Live Leaderboard Standings" /></span>
+                      <span className="px-2.5 py-0.5 bg-white/25 text-white rounded-full text-[10px] font-black uppercase tracking-wider">
+                        Live
+                      </span>
+                    </h3>
+                    <p className="text-xs text-white/90 font-medium mt-0.5">
+                      <Translate
+                        fil="Awtomatikong na-update ang mga puntos at ranggo pagkatapos masagot ang aytem!"
+                        en="Points and rankings update live after answering each question!"
+                      />
+                    </p>
+                  </div>
+                </div>
+
+                {myRankInfo && (
+                  <div className="bg-white/20 backdrop-blur-md px-4 py-2.5 rounded-2xl flex items-center gap-2 shrink-0 self-start sm:self-center border border-white/20">
+                    <span className="text-xs font-bold text-white/85">
+                      <Translate fil="Iyong Ranggo:" en="Your Rank:" />
+                    </span>
+                    <span className="text-xl font-black text-yellow-300">
+                      #{myRankInfo.rank}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="text-left max-w-2xl mx-auto">
+                <LiveLeaderboard
+                  sessionId={initialSession.id}
+                  mode={session?.mode}
+                  revealMode={session?.reveal_mode}
+                  resultsRevealedAt={session?.results_revealed_at}
+                  isHost={false}
+                  currentUserId={currentUserId}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -594,6 +683,45 @@ export function StudentLivePlayerClient({
               <Trophy className="w-4 h-4" />
               <Translate fil="Tingnan ang Detalyadong Resulta" en="View Detailed Results" />
             </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for viewing leaderboard on demand */}
+      {isLeaderboardModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl border border-slate-200 animate-scale-up">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shadow-xs">
+                  <Trophy className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-heading font-black text-slate-900 text-lg leading-tight">
+                    <Translate fil="Kasalukuyang Talaan ng Marka" en="Current Leaderboard" />
+                  </h3>
+                  <p className="text-xs text-slate-500 font-bold">
+                    <Translate fil="Live Standings" en="Live Standings" />
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLeaderboardModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <LiveLeaderboard
+              sessionId={initialSession.id}
+              mode={session?.mode}
+              revealMode={session?.reveal_mode}
+              resultsRevealedAt={session?.results_revealed_at}
+              isHost={false}
+              currentUserId={currentUserId}
+            />
           </div>
         </div>
       )}
