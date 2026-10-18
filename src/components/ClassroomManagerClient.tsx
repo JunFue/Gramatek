@@ -6,7 +6,8 @@ import {
   Users, FileQuestion, ArrowLeft, Plus, Settings, RefreshCw, 
   Star, AlertTriangle, UserMinus, CheckCircle2, X, Edit3, 
   Loader2, Zap, Trash2, Table, Award, Download, 
-  Search, Clock, ChevronRight, Sparkles, Trophy, Target
+  Search, Clock, ChevronRight, Sparkles, Trophy, Target,
+  Megaphone, Send, CalendarClock
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -20,6 +21,12 @@ import {
   giveStudentWarning,
   deleteClassroom
 } from '@/app/educator/classrooms/actions'
+import {
+  sendClassroomAnnouncement,
+  deleteClassroomAnnouncement,
+  AnnouncementPriority
+} from '@/app/notifications/actions'
+import { AnnouncementItem } from '@/components/NotificationsPageClient'
 import { 
   getGradeTier, 
   calculateClassroomAnalyticsSummary, 
@@ -47,6 +54,9 @@ interface ClassroomManagerClientProps {
     title: string
     is_published: boolean
     time_limit_seconds: number
+    game_mode?: string
+    scheduled_start?: string | null
+    scheduled_end?: string | null
     created_at: string
   }>
   attempts?: Array<{
@@ -72,20 +82,23 @@ interface ClassroomManagerClientProps {
       profiles?: any
     }>
   }>
+  announcements?: AnnouncementItem[]
 }
 
-type TabType = 'quizzes' | 'gradebook' | 'students' | 'live'
+type TabType = 'quizzes' | 'announcements' | 'gradebook' | 'students' | 'live'
 
 export function ClassroomManagerClient({ 
   classroom, 
   quizzes,
   attempts = [],
-  liveSessions = []
+  liveSessions = [],
+  announcements = []
 }: ClassroomManagerClientProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState<TabType>('quizzes')
   const [liveSessionsList, setLiveSessionsList] = useState(liveSessions)
+  const [announcementsList, setAnnouncementsList] = useState<AnnouncementItem[]>(announcements)
   const supabase = createClient()
   
   // Feedback toast
@@ -100,6 +113,10 @@ export function ClassroomManagerClient({
   useEffect(() => {
     setLiveSessionsList(liveSessions)
   }, [liveSessions])
+
+  useEffect(() => {
+    setAnnouncementsList(announcements)
+  }, [announcements])
 
   // Realtime subscription for live sessions in this classroom
   useEffect(() => {
@@ -141,6 +158,12 @@ export function ClassroomManagerClient({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isAnnounceModalOpen, setIsAnnounceModalOpen] = useState(false)
+
+  // Announcement Composer state
+  const [annTitle, setAnnTitle] = useState('')
+  const [annContent, setAnnContent] = useState('')
+  const [annPriority, setAnnPriority] = useState<AnnouncementPriority>('normal')
   
   // Student Action Modals (Star / Warn / Kick)
   const [activeStudent, setActiveStudent] = useState<{
@@ -209,6 +232,51 @@ export function ClassroomManagerClient({
       } else {
         showToast('success', `Bagong kodigo nabuo: ${res.newCode}`)
         setIsRegenerateModalOpen(false)
+        router.refresh()
+      }
+    })
+  }
+
+  const handleSendAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!annTitle.trim() || !annContent.trim()) {
+      showToast('error', 'Mangyaring ilagay ang pamagat at mensahe ng anunsyo.')
+      return
+    }
+
+    startTransition(async () => {
+      const res = await sendClassroomAnnouncement(classroom.id, annTitle, annContent, annPriority)
+      if (res.error) {
+        showToast('error', res.error)
+      } else {
+        const newAnn: AnnouncementItem = {
+          id: `temp-${Date.now()}`,
+          classroomId: classroom.id,
+          classroomName: classroom.name,
+          title: annTitle.trim(),
+          content: annContent.trim(),
+          priority: annPriority,
+          created_at: new Date().toISOString()
+        }
+        setAnnouncementsList(prev => [newAnn, ...prev])
+        setAnnTitle('')
+        setAnnContent('')
+        setAnnPriority('normal')
+        setIsAnnounceModalOpen(false)
+        showToast('success', `Naipadala na ang anunsyo sa ${res.notifiedCount || 0} na mag-aaral! 📢`)
+        router.refresh()
+      }
+    })
+  }
+
+  const handleDeleteAnnouncement = (ann: AnnouncementItem) => {
+    setAnnouncementsList(prev => prev.filter(a => a.id !== ann.id))
+    startTransition(async () => {
+      const res = await deleteClassroomAnnouncement(classroom.id, ann.id, ann.rawNotifTitle || ann.title)
+      if (res.error) {
+        showToast('error', res.error)
+      } else {
+        showToast('success', 'Inalis na ang anunsyo.')
         router.refresh()
       }
     })
@@ -383,6 +451,13 @@ export function ClassroomManagerClient({
                 {classroom.is_active ? 'Aktibo' : 'Naka-archive'}
               </span>
               <button 
+                onClick={() => setIsAnnounceModalOpen(true)}
+                className="px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 hover:text-violet-900 rounded-full text-xs font-extrabold transition-all flex items-center gap-1.5 border border-violet-200 shadow-xs active:scale-95 cursor-pointer"
+              >
+                <Megaphone className="w-3.5 h-3.5" />
+                <Translate fil="Mag-anunsyo" en="Announce" />
+              </button>
+              <button 
                 onClick={() => setIsEditModalOpen(true)}
                 className="px-3 py-1.5 bg-slate-100 hover:bg-brand-light text-slate-700 hover:text-brand-primary rounded-full text-xs font-extrabold transition-all flex items-center gap-1.5 border border-slate-200 shadow-xs active:scale-95 cursor-pointer"
               >
@@ -449,6 +524,21 @@ export function ClassroomManagerClient({
         </button>
 
         <button
+          onClick={() => setActiveTab('announcements')}
+          className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs sm:text-sm rounded-t-xl transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'announcements'
+              ? 'bg-white text-brand-primary border-b-2 border-brand-primary font-black shadow-xs'
+              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'
+          }`}
+        >
+          <Megaphone className="w-4 h-4 text-violet-600" />
+          <Translate fil="Mga Anunsyo" en="Announcements" />
+          <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-[10px] font-black">
+            {announcementsList.length}
+          </span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('gradebook')}
           className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs sm:text-sm rounded-t-xl transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'gradebook'
@@ -497,12 +587,52 @@ export function ClassroomManagerClient({
       {/* ================= TAB 1: QUIZZES ================= */}
       {activeTab === 'quizzes' && (
         <div className="space-y-4 sm:space-y-6">
+          {/* Latest Classroom Announcement Preview Banner */}
+          {announcementsList.length > 0 && (
+            <div className="bg-linear-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Megaphone className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-violet-700 bg-violet-100 px-2 py-0.5 rounded-md">
+                      Pinakabagong Anunsyo
+                    </span>
+                    <span className="text-[11px] font-bold text-slate-400">
+                      {new Date(announcementsList[0].created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  <h4 className="font-heading font-bold text-slate-900 text-sm sm:text-base truncate">
+                    {announcementsList[0].title}
+                  </h4>
+                  <p className="text-xs text-slate-600 font-medium line-clamp-1">
+                    {announcementsList[0].content}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab('announcements')}
+                className="px-3.5 py-2 bg-white hover:bg-violet-100 text-violet-700 font-extrabold text-xs rounded-xl border border-violet-200 transition-colors shrink-0 self-start sm:self-center cursor-pointer"
+              >
+                <Translate fil="Tingnan Lahat ng Anunsyo" en="View All Announcements" /> ({announcementsList.length})
+              </button>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <h2 className="text-lg sm:text-xl font-heading font-black text-slate-900 flex items-center gap-2">
               <FileQuestion className="w-5 h-5 text-brand-primary" />
               <Translate fil="Mga Pagsusulit sa Silid" en="Classroom Quizzes" />
             </h2>
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setIsAnnounceModalOpen(true)}
+                className="px-3.5 sm:px-4 py-1.5 sm:py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs md:text-sm font-black rounded-full transition-all flex items-center gap-1.5 shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
+              >
+                <Megaphone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <Translate fil="Mag-anunsyo" en="Announce" />
+              </button>
               {activeLiveSession ? (
                 <Link 
                   href={`/educator/classrooms/${classroom.id}/live/${activeLiveSession.id}/host`} 
@@ -539,6 +669,13 @@ export function ClassroomManagerClient({
                   ? Math.round(qAttempts.reduce((acc, a) => acc + (a.total_questions > 0 ? (a.score / a.total_questions) * 100 : 0), 0) / qAttempts.length)
                   : 0
 
+                const deadlineDate = quiz.scheduled_end ? new Date(quiz.scheduled_end) : null
+                const nowMs = Date.now()
+                const isPastDue = deadlineDate ? deadlineDate.getTime() <= nowMs : false
+                const isDueSoon = deadlineDate
+                  ? deadlineDate.getTime() > nowMs && deadlineDate.getTime() - nowMs <= 72 * 60 * 60 * 1000
+                  : false
+
                 return (
                   <Link 
                     href={`/educator/quizzes/${quiz.id}`} 
@@ -556,11 +693,27 @@ export function ClassroomManagerClient({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3 text-slate-500 font-medium text-xs mt-1">
+                    <div className="flex flex-wrap items-center gap-2 text-slate-500 font-medium text-xs mt-1">
                       <span>{Math.floor(quiz.time_limit_seconds / 60)} min limit</span>
                       <span>•</span>
                       <span>Nilikha {new Date(quiz.created_at).toLocaleDateString()}</span>
                     </div>
+
+                    {deadlineDate && (
+                      <div className={`mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border ${
+                        isPastDue
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : isDueSoon
+                          ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : 'bg-slate-50 text-slate-700 border-slate-200'
+                      }`}>
+                        <CalendarClock className="w-3.5 h-3.5 shrink-0" />
+                        <span>
+                          {isPastDue ? '⏰ Lampas sa Deadline: ' : isDueSoon ? '⏳ Malapit na Deadline: ' : '📅 Deadline: '}
+                          {deadlineDate.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Quiz Metrics */}
                     <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
@@ -592,6 +745,116 @@ export function ClassroomManagerClient({
                >
                  <Translate fil="Gumawa ng unang pagsusulit" en="Create first quiz" />
                </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ================= TAB 1B: CLASSROOM ANNOUNCEMENTS ================= */}
+      {activeTab === 'announcements' && (
+        <div className="space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg sm:text-xl font-heading font-black text-slate-900 flex items-center gap-2">
+                <Megaphone className="w-5 h-5 text-violet-600" />
+                <Translate fil="Mga Anunsyo sa Silid-aralan" en="Classroom Announcements" />
+              </h2>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                <Translate
+                  fil="Lahat ng ipapadalang anunsyo ay makikita ng mga mag-aaral sa kanilang Notifications at dito sa silid-aralan."
+                  en="All announcements sent will appear in students' Notifications and directly inside this classroom."
+                />
+              </p>
+            </div>
+
+            <button
+              onClick={() => setIsAnnounceModalOpen(true)}
+              className="px-4 py-2.5 bg-brand-primary hover:bg-slate-700 text-white font-black text-xs sm:text-sm rounded-2xl shadow-md transition-all flex items-center gap-2 self-start sm:self-auto cursor-pointer active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <Translate fil="Bagong Anunsyo sa Klase" en="New Class Announcement" />
+            </button>
+          </div>
+
+          {announcementsList.length > 0 ? (
+            <div className="space-y-3">
+              {announcementsList.map((ann) => {
+                const priorityStyles =
+                  ann.priority === 'urgent'
+                    ? 'bg-rose-100 text-rose-800 border-rose-200'
+                    : ann.priority === 'important'
+                    ? 'bg-amber-100 text-amber-800 border-amber-200'
+                    : 'bg-violet-100 text-violet-800 border-violet-200'
+
+                const priorityLabel =
+                  ann.priority === 'urgent'
+                    ? '🚨 Apurahan / Urgent'
+                    : ann.priority === 'important'
+                    ? '⚡ Mahalaga / Important'
+                    : '📢 Pangkalahatan'
+
+                return (
+                  <div
+                    key={ann.id}
+                    className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all relative"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3.5 min-w-0 flex-1">
+                        <div className="w-11 h-11 rounded-2xl bg-violet-50 border border-violet-200 text-violet-600 flex items-center justify-center shrink-0">
+                          <Megaphone className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                            <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${priorityStyles}`}>
+                              {priorityLabel}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-400">
+                              {new Date(ann.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                          <h3 className="text-base sm:text-lg font-heading font-black text-slate-900">
+                            {ann.title}
+                          </h3>
+                          <p className="text-xs sm:text-sm text-slate-600 font-medium mt-1.5 whitespace-pre-line leading-relaxed">
+                            {ann.content}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleDeleteAnnouncement(ann)}
+                        disabled={isPending}
+                        className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                        title="Alisin ang anunsyo"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-sm">
+              <div className="w-14 h-14 rounded-2xl bg-violet-50 text-violet-400 flex items-center justify-center mx-auto mb-3">
+                <Megaphone className="w-7 h-7" />
+              </div>
+              <h3 className="text-slate-800 font-heading font-bold text-base mb-1">
+                <Translate fil="Wala pang naipapadalang anunsyo sa silid na ito." en="No announcements posted in this classroom yet." />
+              </h3>
+              <p className="text-slate-500 text-xs font-medium max-w-md mx-auto mb-5">
+                <Translate
+                  fil="Magpadala ng paalala tungkol sa mga takdang-aralin, deadline ng pagsusulit, o iskedyul ng Live Arena."
+                  en="Send reminders about asynchronous tasks, quiz deadlines, or Live Arena schedules."
+                />
+              </p>
+              <button
+                onClick={() => setIsAnnounceModalOpen(true)}
+                className="px-5 py-2.5 bg-brand-primary hover:bg-slate-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-md inline-flex items-center gap-2 cursor-pointer"
+              >
+                <Megaphone className="w-4 h-4" />
+                <Translate fil="Mag-post ng Unang Anunsyo" en="Post First Announcement" />
+              </button>
             </div>
           )}
         </div>
@@ -1479,6 +1742,137 @@ export function ClassroomManagerClient({
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* 4. Classroom Announcement Composer Modal */}
+      {isAnnounceModalOpen && (
+        <div className="fixed inset-0 z-[130] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white w-full max-w-lg rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-200 relative animate-slide-up">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-violet-100 flex items-center justify-center text-violet-700">
+                  <Megaphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-heading font-black text-slate-900">
+                    <Translate fil="Magpadala ng Anunsyo sa Klase" en="Post Classroom Announcement" />
+                  </h3>
+                  <p className="text-xs text-slate-400 font-semibold">
+                    Para sa: {classroom.name} ({classroom.members?.length || 0} mag-aaral)
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAnnounceModalOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendAnnouncement} className="space-y-4">
+              <div>
+                <label className="text-xs font-black text-slate-700 block mb-1.5">
+                  <Translate fil="Antas ng Kahalagahan" en="Priority Level" />
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'normal', label: '📢 Pangkalahatan', style: 'border-violet-200 bg-violet-50 text-violet-800' },
+                    { value: 'important', label: '⚡ Mahalaga', style: 'border-amber-300 bg-amber-50 text-amber-800' },
+                    { value: 'urgent', label: '🚨 Apurahan', style: 'border-rose-300 bg-rose-50 text-rose-800' }
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setAnnPriority(opt.value as AnnouncementPriority)}
+                      className={`py-2 px-3 rounded-xl text-xs font-black border transition-all cursor-pointer ${
+                        annPriority === opt.value
+                          ? `${opt.style} ring-2 ring-brand-primary/30`
+                          : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-black text-slate-700 block mb-1.5">
+                  <Translate fil="Pamagat ng Anunsyo" en="Announcement Title" /> *
+                </label>
+                <input
+                  type="text"
+                  value={annTitle}
+                  onChange={(e) => setAnnTitle(e.target.value)}
+                  required
+                  placeholder="Hal. Paalala sa Deadline ng Pagsusulit"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 font-bold text-xs sm:text-sm focus:outline-none focus:border-brand-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-black text-slate-700 block mb-1.5">
+                  <Translate fil="Mensahe" en="Message" /> *
+                </label>
+                <textarea
+                  value={annContent}
+                  onChange={(e) => setAnnContent(e.target.value)}
+                  required
+                  rows={4}
+                  placeholder="Isulat ang iyong anunsyo o tagubilin para sa klase..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 font-semibold text-xs sm:text-sm focus:outline-none focus:border-brand-primary resize-none"
+                />
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {[
+                    {
+                      t: 'Paalala sa Papalapit na Deadline',
+                      c: 'Mga mag-aaral, pakitandaan na malapit na ang deadline ng ating asynchronous na pagsusulit. Mangyaring tapusin ito bago sumapit ang takdang oras.'
+                    },
+                    {
+                      t: 'Bagong Asynchronous Task',
+                      c: 'May bagong pagsusulit na nailathala sa ating silid-aralan. Buksan ang silid upang masagutan ito.'
+                    },
+                    {
+                      t: 'Iskedyul ng Live Arena Session',
+                      c: 'Maghanda para sa ating Live Arena session mamaya! Siguraduhing handa ang inyong koneksyon.'
+                    }
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setAnnTitle(preset.t)
+                        setAnnContent(preset.c)
+                      }}
+                      className="text-[10px] font-bold bg-violet-50 hover:bg-violet-100 text-violet-700 px-2.5 py-1 rounded-full border border-violet-200 transition-colors cursor-pointer"
+                    >
+                      + {preset.t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAnnounceModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 text-xs sm:text-sm cursor-pointer"
+                >
+                  <Translate fil="Kanselahin" en="Cancel" />
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="px-6 py-2.5 bg-brand-primary hover:bg-slate-700 text-white font-black rounded-xl shadow-md text-xs sm:text-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  <Translate fil="Ipadala ang Anunsyo" en="Send Announcement" />
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

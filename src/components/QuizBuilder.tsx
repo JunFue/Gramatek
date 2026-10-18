@@ -479,6 +479,39 @@ export function QuizBuilder({
         </div>
       )}
 
+      {/* Optional Task Deadline for Mastery & Survival Modes */}
+      {gameMode !== 'scheduled' && (
+        <div className="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-200 animate-slide-up shadow-sm">
+          <h3 className="text-base font-heading font-bold text-slate-700 mb-3 flex items-center gap-2">
+            <CalendarClock className="w-5 h-5 text-brand-primary" />
+            <Translate fil="Takdang Petsa / Deadline ng Gawain (Opsyonal)" en="Task Submission Deadline (Optional)" />
+          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <input
+              type="datetime-local"
+              value={scheduledEnd}
+              onChange={(e) => setScheduledEnd(e.target.value)}
+              className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:border-brand-primary transition-all shadow-sm"
+            />
+            {scheduledEnd && (
+              <button
+                type="button"
+                onClick={() => setScheduledEnd('')}
+                className="text-xs font-bold text-rose-600 hover:underline self-start sm:self-center cursor-pointer"
+              >
+                <Translate fil="Alisin ang Deadline" en="Clear Deadline" />
+              </button>
+            )}
+            <p className="text-xs text-slate-500 font-medium">
+              <Translate
+                fil="Magpapadala ng awtomatikong abiso sa iyo at sa mga mag-aaral kapag malapit na o sumapit na ang deadline."
+                en="Automatically notifies you and enrolled students when the deadline is upcoming or due."
+              />
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Feedback Reveal Timing Settings (Mastery & Scheduled) ── */}
       <div className="bg-white rounded-3xl p-8 mb-8 border border-slate-200 relative overflow-hidden shadow-sm">
         <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 rounded-full blur-[60px] -mr-24 -mt-24 pointer-events-none" />

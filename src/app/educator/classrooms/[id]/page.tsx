@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { ClassroomManagerClient } from '@/components/ClassroomManagerClient'
+import { mergeAnnouncements } from '@/lib/utils/announcements'
 
 export default async function ClassroomDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -33,7 +34,7 @@ export default async function ClassroomDetailPage({ params }: { params: Promise<
   // 2. Fetch quizzes for this classroom
   const { data: quizzes } = await supabase
     .from('quizzes')
-    .select('id, title, is_published, time_limit_seconds, created_at')
+    .select('id, title, is_published, time_limit_seconds, game_mode, scheduled_start, scheduled_end, created_at')
     .eq('classroom_id', id)
     .order('created_at', { ascending: false })
 
@@ -86,12 +87,41 @@ export default async function ClassroomDetailPage({ params }: { params: Promise<
     console.error('Error fetching live sessions:', lsErr)
   }
 
+  // 5. Fetch Classroom Announcements (from classroom_announcements table + notifications fallback)
+  let tableAnnouncements: any[] = []
+  try {
+    const { data: annData } = await supabase
+      .from('classroom_announcements')
+      .select('*')
+      .eq('classroom_id', id)
+      .order('created_at', { ascending: false })
+
+    if (annData) tableAnnouncements = annData
+  } catch {
+    // Safe fallback if table doesn't exist yet
+  }
+
+  const { data: notifAnnouncements } = await supabase
+    .from('notifications')
+    .select('id, title, body, link, created_at')
+    .eq('user_id', user.id)
+    .ilike('link', `%${id}%`)
+    .order('created_at', { ascending: false })
+
+  const classroomNameMap = new Map([[classroom.id, classroom.name]])
+  const announcements = mergeAnnouncements(
+    tableAnnouncements,
+    notifAnnouncements || [],
+    classroomNameMap
+  )
+
   return (
     <ClassroomManagerClient 
       classroom={classroom} 
       quizzes={quizList}
       attempts={attempts}
       liveSessions={liveSessions || []}
+      announcements={announcements}
     />
   )
 }

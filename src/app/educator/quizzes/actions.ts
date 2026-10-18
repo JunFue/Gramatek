@@ -94,20 +94,27 @@ export async function saveQuiz(
     }
   }
 
-  // 3. Create Notifications if scheduled and published
-  if (is_published && config?.gameMode === 'scheduled') {
-    const { data: members } = await supabase
-      .from('classroom_members')
-      .select('student_id')
-      .eq('classroom_id', classroom_id)
+  // 3. Create Notifications if published
+  if (is_published && classroom_id) {
+    const [{ data: members }, { data: classroom }] = await Promise.all([
+      supabase.from('classroom_members').select('student_id').eq('classroom_id', classroom_id),
+      supabase.from('classrooms').select('name').eq('id', classroom_id).single()
+    ])
+
+    const roomName = classroom?.name || 'Silid-aralan'
+    const deadlineText = quizData.scheduled_end
+      ? ` • Deadline: ${new Date(quizData.scheduled_end).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+      : ''
 
     if (members && members.length > 0) {
-      const { data: classroom } = await supabase.from('classrooms').select('name').eq('id', classroom_id).single()
       const notifications = members.map(member => ({
         user_id: member.student_id,
-        title: 'New Scheduled Mission',
-        body: `A new mission "${title}" has been scheduled in ${classroom?.name}.`,
+        title: quizData.scheduled_end
+          ? `📅 Bagong Gawain sa ${roomName}: ${title.trim()}`
+          : `🎮 Bagong Pagsusulit sa ${roomName}: ${title.trim()}`,
+        body: `May bagong pagsusulit na "${title.trim()}" sa ${roomName}${deadlineText}.`,
         link: `/student/classrooms/${classroom_id}`,
+        is_read: false
       }))
 
       await supabase.from('notifications').insert(notifications)
@@ -117,6 +124,8 @@ export async function saveQuiz(
   // 4. Revalidate and Return quizId for client navigation
   revalidatePath(`/educator/classrooms/${classroom_id}`)
   revalidatePath(`/student/classrooms/${classroom_id}`)
+  revalidatePath('/educator/notifications')
+  revalidatePath('/student/notifications')
   revalidatePath('/educator')
   revalidatePath('/student')
   return { success: true, quizId: quiz.id }
@@ -296,7 +305,7 @@ export async function publishQuiz(quiz_id: string) {
 
   const { data: quiz, error: fetchError } = await supabase
     .from('quizzes')
-    .select('id, classroom_id, title, game_mode')
+    .select('id, classroom_id, title, game_mode, scheduled_end')
     .eq('id', quiz_id)
     .eq('educator_id', user.id)
     .single()
@@ -315,20 +324,27 @@ export async function publishQuiz(quiz_id: string) {
     return { error: updateError.message || 'Failed to publish quiz' }
   }
 
-  // If scheduled, notify classroom members
-  if (quiz.game_mode === 'scheduled') {
-    const { data: members } = await supabase
-      .from('classroom_members')
-      .select('student_id')
-      .eq('classroom_id', quiz.classroom_id)
+  // Notify classroom members when published
+  if (quiz.classroom_id) {
+    const [{ data: members }, { data: classroom }] = await Promise.all([
+      supabase.from('classroom_members').select('student_id').eq('classroom_id', quiz.classroom_id),
+      supabase.from('classrooms').select('name').eq('id', quiz.classroom_id).single()
+    ])
+
+    const roomName = classroom?.name || 'Silid-aralan'
+    const deadlineText = quiz.scheduled_end
+      ? ` • Deadline: ${new Date(quiz.scheduled_end).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+      : ''
 
     if (members && members.length > 0) {
-      const { data: classroom } = await supabase.from('classrooms').select('name').eq('id', quiz.classroom_id).single()
       const notifications = members.map(member => ({
         user_id: member.student_id,
-        title: 'New Scheduled Mission',
-        body: `A new mission "${quiz.title}" has been published in ${classroom?.name}.`,
+        title: quiz.scheduled_end
+          ? `📅 Bagong Gawain sa ${roomName}: ${quiz.title}`
+          : `🎮 Bagong Pagsusulit sa ${roomName}: ${quiz.title}`,
+        body: `May bagong nailathalang pagsusulit na "${quiz.title}" sa ${roomName}${deadlineText}.`,
         link: `/student/classrooms/${quiz.classroom_id}`,
+        is_read: false
       }))
 
       await supabase.from('notifications').insert(notifications)
@@ -338,6 +354,8 @@ export async function publishQuiz(quiz_id: string) {
   revalidatePath(`/educator/quizzes/${quiz_id}`)
   revalidatePath(`/educator/classrooms/${quiz.classroom_id}`)
   revalidatePath(`/student/classrooms/${quiz.classroom_id}`)
+  revalidatePath('/educator/notifications')
+  revalidatePath('/student/notifications')
   revalidatePath('/educator')
   revalidatePath('/student')
 

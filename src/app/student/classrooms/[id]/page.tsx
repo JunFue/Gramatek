@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Play, BookOpen, Target, CheckCircle2, Award, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Play, BookOpen, Target, CheckCircle2, Award, ChevronRight, Megaphone, CalendarClock } from 'lucide-react'
 import { Translate } from '@/components/Translate'
 import { getGradeTier, calculateStudentClassroomSummary } from '@/lib/utils/grading'
 import { StudentLiveBanner } from '@/components/live/StudentLiveBanner'
+import { mergeAnnouncements } from '@/lib/utils/announcements'
 
 export default async function StudentClassroomPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -30,7 +31,7 @@ export default async function StudentClassroomPage({ params }: { params: Promise
   // 2. Fetch Quizzes
   const { data: quizzes } = await supabase
     .from('quizzes')
-    .select('id, title, description, time_limit_seconds')
+    .select('id, title, description, time_limit_seconds, game_mode, scheduled_start, scheduled_end')
     .eq('classroom_id', id)
     .eq('is_published', true)
     .order('created_at', { ascending: false })
@@ -80,7 +81,41 @@ export default async function StudentClassroomPage({ params }: { params: Promise
     isParticipant = !!pCheck
   }
 
+  // 6. Fetch Classroom Announcements for this classroom
+  let tableAnnouncements: any[] = []
+  try {
+    const { data: annData } = await supabase
+      .from('classroom_announcements')
+      .select('id, classroom_id, title, content, priority, created_at')
+      .eq('classroom_id', id)
+      .order('created_at', { ascending: false })
+      .limit(30)
+    if (annData) tableAnnouncements = annData
+  } catch {
+    // Fallback if table not created yet
+  }
+
+  const { data: studentNotifs } = await supabase
+    .from('notifications')
+    .select('id, title, body, link, created_at')
+    .eq('user_id', user.id)
+    .ilike('link', `%${id}%`)
+    .order('created_at', { ascending: false })
+    .limit(40)
+
+  const classroomNameMap = new Map<string, string>([[classroom.id, classroom.name]])
+  const educatorNameMap = new Map<string, string>([
+    [classroom.id, classroom.profiles?.full_name || 'Guro']
+  ])
+  const announcements = mergeAnnouncements(
+    tableAnnouncements,
+    studentNotifs || [],
+    classroomNameMap,
+    educatorNameMap
+  )
+
   const tier = summary.overallGradeTier
+  const nowMs = Date.now()
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto animate-fade-in relative z-10 transition-colors duration-300 space-y-6 sm:space-y-8">
@@ -160,6 +195,87 @@ export default async function StudentClassroomPage({ params }: { params: Promise
         </div>
       </div>
 
+      {/* Classroom Announcements Feed */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl sm:text-2xl font-heading font-extrabold text-slate-900 flex items-center gap-2">
+            <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 text-violet-600" />
+            <Translate fil="Mga Anunsyo ng Guro" en="Classroom Announcements" />
+            <span className="px-2.5 py-0.5 rounded-full bg-violet-100 text-violet-800 text-xs font-black">
+              {announcements.length}
+            </span>
+          </h2>
+          <Link
+            href="/student/notifications"
+            className="text-xs font-extrabold text-brand-primary hover:underline flex items-center gap-1"
+          >
+            <Translate fil="Lahat ng Abiso" en="All Notifications" />
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {announcements.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3 sm:gap-4">
+            {announcements.map((ann) => {
+              const priorityStyles =
+                ann.priority === 'urgent'
+                  ? 'bg-rose-100 text-rose-800 border-rose-200'
+                  : ann.priority === 'important'
+                  ? 'bg-amber-100 text-amber-800 border-amber-200'
+                  : 'bg-violet-100 text-violet-800 border-violet-200'
+
+              const priorityLabel =
+                ann.priority === 'urgent'
+                  ? '🚨 Apurahan / Urgent'
+                  : ann.priority === 'important'
+                  ? '⚡ Mahalaga / Important'
+                  : '📢 Anunsyo ng Klase'
+
+              return (
+                <div
+                  key={ann.id}
+                  className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-violet-200/80 shadow-sm hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-violet-50 border border-violet-200 text-violet-600 flex items-center justify-center shrink-0">
+                      <Megaphone className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${priorityStyles}`}>
+                          {priorityLabel}
+                        </span>
+                        {ann.educatorName && (
+                          <span className="text-[11px] font-bold text-slate-600">
+                            • Mula kay {ann.educatorName}
+                          </span>
+                        )}
+                        <span className="text-[11px] font-semibold text-slate-400">
+                          • {new Date(ann.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <h3 className="text-base sm:text-lg font-heading font-black text-slate-900">
+                        {ann.title}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-600 font-medium mt-1.5 whitespace-pre-line leading-relaxed">
+                        {ann.content}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="bg-white/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center text-slate-500 font-semibold border border-slate-200/80 shadow-xs text-xs sm:text-sm">
+            <Translate
+              fil="Wala pang nakapaskil na anunsyo mula sa iyong guro sa silid na ito."
+              en="No announcements posted by your teacher in this classroom yet."
+            />
+          </div>
+        )}
+      </div>
+
       {/* Available Quizzes Grid */}
       <div>
         <h2 className="text-xl sm:text-2xl font-heading font-extrabold text-brand-primary flex items-center gap-2 mb-4 sm:mb-6">
@@ -172,6 +288,12 @@ export default async function StudentClassroomPage({ params }: { params: Promise
               const qProg = summary.quizzes[quiz.id]
               const hasAttempted = qProg?.hasAttempted
               const qTier = qProg?.gradeTier
+
+              const deadlineDate = quiz.scheduled_end ? new Date(quiz.scheduled_end) : null
+              const isPastDue = deadlineDate ? deadlineDate.getTime() <= nowMs : false
+              const isDueSoon = deadlineDate
+                ? deadlineDate.getTime() > nowMs && deadlineDate.getTime() - nowMs <= 72 * 60 * 60 * 1000
+                : false
 
               return (
                 <div key={quiz.id} className="glass-strong card-hover rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-white/80 flex flex-col relative overflow-hidden group shadow-lg">
@@ -189,7 +311,23 @@ export default async function StudentClassroomPage({ params }: { params: Promise
                     )}
                   </div>
                   
-                  <p className="text-slate-600 text-xs sm:text-sm font-semibold mb-6 flex-1 line-clamp-2 relative z-10">{quiz.description}</p>
+                  <p className="text-slate-600 text-xs sm:text-sm font-semibold mb-4 flex-1 line-clamp-2 relative z-10">{quiz.description}</p>
+
+                  {deadlineDate && (
+                    <div className={`mb-4 self-start inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border relative z-10 ${
+                      isPastDue && !hasAttempted
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : isDueSoon && !hasAttempted
+                        ? 'bg-amber-50 text-amber-800 border-amber-200'
+                        : 'bg-slate-50 text-slate-700 border-slate-200'
+                    }`}>
+                      <CalendarClock className="w-3.5 h-3.5 shrink-0" />
+                      <span>
+                        {isPastDue ? '⏰ Lampas sa Deadline: ' : isDueSoon ? '⏳ Malapit na Deadline: ' : '📅 Deadline: '}
+                        {deadlineDate.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )}
                   
                   <div className="pt-4 border-t border-slate-200/80 flex items-center justify-between relative z-10">
                     <div className="text-slate-500 font-extrabold text-xs sm:text-sm flex items-center gap-1.5">

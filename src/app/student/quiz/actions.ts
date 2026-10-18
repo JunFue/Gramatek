@@ -67,12 +67,66 @@ export async function submitQuizAttempt(
   revalidatePath('/student/performance')
   revalidatePath('/student/practice')
   revalidatePath('/student')
+  revalidatePath('/student/notifications')
+  revalidatePath('/educator/notifications')
 
-  // Find classroom ID if classroom quiz
+  // Find classroom ID and notify educator + student if classroom quiz
   if (!prebuilt) {
-    const { data: quiz } = await supabase.from('quizzes').select('classroom_id').eq('id', quiz_id).single()
-    if (quiz?.classroom_id) {
-      revalidatePath(`/student/classrooms/${quiz.classroom_id}`)
+    const [{ data: quiz }, { data: studentProfile }] = await Promise.all([
+      supabase
+        .from('quizzes')
+        .select('id, title, classroom_id, educator_id, classrooms(name)')
+        .eq('id', quiz_id)
+        .single(),
+      supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+    ])
+
+    if (quiz) {
+      const classroomName = (quiz.classrooms as any)?.name || 'Silid-aralan'
+      const studentName = studentProfile?.full_name || 'Isang mag-aaral'
+      const pct = total_questions > 0 ? Math.round((score / total_questions) * 100) : 0
+
+      const notifsToInsert: Array<{
+        user_id: string
+        title: string
+        body: string
+        link: string
+        is_read: boolean
+      }> = []
+
+      if (quiz.educator_id) {
+        notifsToInsert.push({
+          user_id: quiz.educator_id,
+          title: `📝 Bagong Pagsusumite: ${quiz.title}`,
+          body: `Nagsumite si ${studentName} sa "${quiz.title}" (${classroomName}) • Iskor: ${score}/${total_questions} (${pct}%).`,
+          link: `/educator/quizzes/${quiz.id}`,
+          is_read: false
+        })
+      }
+
+      notifsToInsert.push({
+        user_id: user.id,
+        title: `✅ Naipasa ang Gawain: ${quiz.title}`,
+        body: `Matagumpay mong naipasa ang "${quiz.title}" sa ${classroomName} na may iskor na ${score}/${total_questions} (${pct}%).`,
+        link: quiz.classroom_id ? `/student/classrooms/${quiz.classroom_id}` : '/student/performance',
+        is_read: false
+      })
+
+      try {
+        await supabase.from('notifications').insert(notifsToInsert)
+      } catch (notifErr) {
+        console.warn('Failed to insert submission notifications:', notifErr)
+      }
+
+      if (quiz.classroom_id) {
+        revalidatePath(`/student/classrooms/${quiz.classroom_id}`)
+        revalidatePath(`/educator/classrooms/${quiz.classroom_id}`)
+      }
+      revalidatePath(`/educator/quizzes/${quiz.id}`)
     }
   }
   

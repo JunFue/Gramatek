@@ -15,7 +15,7 @@ export async function joinClassroom(formData: FormData) {
   // 1. Find classroom by code
   const { data: classroom, error: classroomError } = await supabase
     .from('classrooms')
-    .select('id, enrollment_limit')
+    .select('id, name, educator_id, enrollment_limit')
     .eq('enrollment_code', code.trim().toUpperCase())
     .single()
 
@@ -55,7 +55,50 @@ export async function joinClassroom(formData: FormData) {
 
   if (joinError) return { error: 'Failed to join classroom' }
 
+  // 5. Notify educator and student
+  try {
+    const { data: studentProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+
+    const studentName = studentProfile?.full_name || 'Isang mag-aaral'
+    const notifs: Array<{
+      user_id: string
+      title: string
+      body: string
+      link: string
+      is_read: boolean
+    }> = [
+      {
+        user_id: user.id,
+        title: `🏫 Nakasali sa ${classroom.name}`,
+        body: `Maligayang pagdating sa silid-aralang "${classroom.name}"! Maaari mo nang makita ang mga pagsusulit at anunsyo.`,
+        link: `/student/classrooms/${classroom.id}`,
+        is_read: false
+      }
+    ]
+
+    if (classroom.educator_id) {
+      notifs.push({
+        user_id: classroom.educator_id,
+        title: `👋 Bagong Mag-aaral sa ${classroom.name}`,
+        body: `Sumali si ${studentName} sa iyong silid-aralang "${classroom.name}".`,
+        link: `/educator/classrooms/${classroom.id}`,
+        is_read: false
+      })
+    }
+
+    await supabase.from('notifications').insert(notifs)
+  } catch (err) {
+    console.warn('Error creating classroom join notifications:', err)
+  }
+
   revalidatePath('/student')
+  revalidatePath('/student/notifications')
+  revalidatePath('/educator/notifications')
   revalidatePath(`/student/classrooms/${classroom.id}`)
+  revalidatePath(`/educator/classrooms/${classroom.id}`)
   return { success: true, classroomId: classroom.id }
 }
