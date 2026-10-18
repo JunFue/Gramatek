@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { 
   LayoutDashboard, Users, BarChart3, FileQuestion, 
-  GraduationCap, ChevronLeft, ChevronRight, Menu, X, PlusCircle, Zap 
+  ChevronLeft, ChevronRight, Menu, X, PlusCircle, Zap 
 } from 'lucide-react'
 import { SignOutButton } from '@/components/SignOutButton'
 import { Translate } from '@/components/Translate'
@@ -105,8 +106,8 @@ export function EducatorSidebar({ profile, activeSession }: EducatorSidebarProps
       <header className="fixed top-0 left-0 right-0 h-16 bg-brand-primary border-b border-[#285840] z-40 px-4 flex items-center justify-between shadow-md md:hidden">
         {/* Brand Logo & Name */}
         <Link href="/educator" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-brand-light flex items-center justify-center shadow-md shrink-0">
-            <GraduationCap className="text-brand-primary w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shrink-0">
+            <Image src="/logo.png" alt="Gramatek Logo" width={32} height={32} className="w-full h-full object-contain" priority />
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-heading font-black text-white leading-none tracking-tight">Gramatek</span>
@@ -151,8 +152,8 @@ export function EducatorSidebar({ profile, activeSession }: EducatorSidebarProps
             {/* Drawer Header */}
             <div className="h-16 px-4 border-b border-white/10 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-brand-light flex items-center justify-center shadow-md">
-                  <GraduationCap className="text-brand-primary w-4 h-4" />
+                <div className="w-8 h-8 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shrink-0">
+                  <Image src="/logo.png" alt="Gramatek Logo" width={28} height={28} className="w-full h-full object-contain" />
                 </div>
                 <span className="font-heading font-black text-lg text-white">Gramatek Guro</span>
               </div>
@@ -257,8 +258,8 @@ export function EducatorSidebar({ profile, activeSession }: EducatorSidebarProps
         {/* Brand Header */}
         <div className={`h-20 flex items-center px-4 border-b border-white/10 shrink-0 transition-all ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           <div className="flex items-center">
-            <div className="w-9 h-9 rounded-xl bg-brand-light flex items-center justify-center shadow-md shrink-0">
-              <GraduationCap className="text-brand-primary w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shrink-0">
+              <Image src="/logo.png" alt="Gramatek Logo" width={36} height={36} className="w-full h-full object-contain" priority />
             </div>
             {!isCollapsed && (
               <div className="ml-3 overflow-hidden whitespace-nowrap">

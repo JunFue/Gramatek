@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   title: "Gramatek | Matuto Habang Naglalaro!",
   description: "Isang masayang platform kung saan natututo ang mga mag-aaral ng Filipino sa pamamagitan ng mga laro.",
   icons: {
-    icon: '/icon.svg',
+    icon: '/logo.png',
+    apple: '/logo.png',
   },
 };
 

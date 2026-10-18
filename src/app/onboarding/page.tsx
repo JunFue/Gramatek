@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { BookOpen, GraduationCap, ArrowRight, Loader2 } from 'lucide-react'
 import { setUserRole } from '../auth/actions'
 
@@ -22,7 +23,10 @@ export default function OnboardingPage() {
 
       <div className="w-full max-w-4xl relative z-10 animate-slide-up">
         
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 flex flex-col items-center">
+          <div className="w-20 h-20 rounded-3xl bg-white p-2.5 shadow-md border border-[#d4ddd0] flex items-center justify-center mb-5">
+            <Image src="/logo.png" alt="Gramatek Logo" width={64} height={64} className="w-full h-full object-contain" priority />
+          </div>
           <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-brand-primary mb-4 drop-shadow-sm">Welcome to Gramatek</h1>
           <p className="text-xl text-slate-600 font-medium">How will you be using the platform?</p>
         </div>

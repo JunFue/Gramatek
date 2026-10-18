@@ -99,8 +99,8 @@ export function DisplayClient({
       {/* Top Bar */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-6">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-brand-primary/30 border border-brand-primary text-emerald-400 flex items-center justify-center font-heading font-black text-2xl shadow-lg">
-            G
+          <div className="w-12 h-12 rounded-2xl bg-white p-1.5 border border-brand-primary flex items-center justify-center shadow-lg shrink-0">
+            <img src="/logo.png" alt="Gramatek Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-heading font-black tracking-tight text-white">
